@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.zeus/
+*.zab
+.DS_Store
+.omc/

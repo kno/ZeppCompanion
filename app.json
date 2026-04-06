@@ -1,0 +1,69 @@
+{
+  "configVersion": "v3",
+  "app": {
+    "appId": 1000001,
+    "appName": "ZeepCompanion",
+    "appType": "app",
+    "version": {
+      "code": 1,
+      "name": "1.0.0"
+    },
+    "icon": "icon.png",
+    "vender": "ZeepCompanion",
+    "description": "A companion app for Zepp OS smartwatches"
+  },
+  "runtime": {
+    "apiVersion": {
+      "compatible": "3.0",
+      "target": "3.0",
+      "minVersion": "3.0"
+    }
+  },
+  "permissions": [
+    "data:user.hd.heart_rate",
+    "data:user.hd.step",
+    "data:user.hd.spo2",
+    "data:user.hd.sleep",
+    "data:user.hd.stress",
+    "data:user.hd.calorie",
+    "device:os.local_storage",
+    "device:os.bg_service"
+  ],
+  "targets": {
+    "amazfit-balance": {
+      "module": {
+        "page": {
+          "pages": [
+            "page/home/index"
+          ]
+        },
+        "app-side": {
+          "path": "app-side/index"
+        },
+        "app-service": {
+          "services": [
+            "app-service/index"
+          ]
+        }
+      },
+      "platforms": [
+        {
+          "name": "amazfit-balance",
+          "deviceSource": 8454400,
+          "st": "r",
+          "sr": "w480"
+        }
+      ],
+      "designWidth": 480
+    }
+  },
+  "i18n": {
+    "en-US": {
+      "appName": "ZeepCompanion"
+    },
+    "es-ES": {
+      "appName": "ZeepCompanion"
+    }
+  },
+  "defaultLanguage": "en-US"
+}

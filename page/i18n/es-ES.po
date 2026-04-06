@@ -1,0 +1,14 @@
+msgid "app_name"
+msgstr "ZeepCompanion"
+
+msgid "heart_rate"
+msgstr "Ritmo Cardiaco"
+
+msgid "steps"
+msgstr "Pasos"
+
+msgid "battery"
+msgstr "Bateria"
+
+msgid "settings"
+msgstr "Ajustes"
