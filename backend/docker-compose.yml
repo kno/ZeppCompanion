@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ZeppCompanion
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/ZeppCompanion
+      JWT_SECRET: change-me-in-production
+      JWT_REFRESH_SECRET: change-me-too-in-production
+      LLM_PROVIDER: openai
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_MODEL: gpt-4o-mini
+
+volumes:
+  pgdata:
