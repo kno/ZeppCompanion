@@ -12,13 +12,6 @@
     "vender": "ZeepCompanion",
     "description": "Training companion with virtual pet for Zepp OS"
   },
-  "runtime": {
-    "apiVersion": {
-      "compatible": "3.0",
-      "target": "3.0",
-      "minVersion": "3.0"
-    }
-  },
   "permissions": [
     "data:user.hd.heart_rate",
     "data:user.hd.step",
@@ -30,17 +23,24 @@
     "device:os.bg_service",
     "device:os.geolocation"
   ],
+  "runtime": {
+    "apiVersion": {
+      "compatible": "3.0",
+      "target": "3.0",
+      "minVersion": "3.0"
+    }
+  },
   "targets": {
-    "zeep-companion": {
+    "gt": {
       "module": {
         "page": {
           "pages": [
-            "page/home/index",
-            "page/training-select/index",
-            "page/pre-training/index",
-            "page/active-training/index",
-            "page/training-summary/index",
-            "page/settings/index"
+            "page/gt/home/index",
+            "page/gt/training-select/index",
+            "page/gt/pre-training/index",
+            "page/gt/active-training/index",
+            "page/gt/training-summary/index",
+            "page/gt/settings/index"
           ]
         },
         "app-side": {
@@ -54,8 +54,7 @@
       },
       "platforms": [
         {
-          "st": "r",
-          "dw": 480
+          "st": "r"
         }
       ],
       "designWidth": 480
