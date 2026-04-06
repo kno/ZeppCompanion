@@ -2,15 +2,15 @@
   "configVersion": "v3",
   "app": {
     "appId": 1000001,
-    "appName": "ZeppCompanion",
+    "appName": "ZeepCompanion",
     "appType": "app",
     "version": {
       "code": 1,
       "name": "1.0.0"
     },
     "icon": "icon.png",
-    "vender": "ZeppCompanion",
-    "description": "A companion app for Zepp OS smartwatches"
+    "vender": "ZeepCompanion",
+    "description": "Training companion with virtual pet for Zepp OS"
   },
   "runtime": {
     "apiVersion": {
@@ -31,7 +31,7 @@
     "device:os.geolocation"
   ],
   "targets": {
-    "amazfit-active": {
+    "zeep-companion": {
       "module": {
         "page": {
           "pages": [
@@ -54,10 +54,8 @@
       },
       "platforms": [
         {
-          "name": "amazfit-active",
-          "deviceSource": 8519936,
           "st": "r",
-          "sr": "w480"
+          "dw": 480
         }
       ],
       "designWidth": 480
@@ -65,10 +63,10 @@
   },
   "i18n": {
     "en-US": {
-      "appName": "ZeppCompanion"
+      "appName": "ZeepCompanion"
     },
     "es-ES": {
-      "appName": "ZeppCompanion"
+      "appName": "ZeepCompanion"
     }
   },
   "defaultLanguage": "en-US"
