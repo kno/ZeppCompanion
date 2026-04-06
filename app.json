@@ -2,14 +2,14 @@
   "configVersion": "v3",
   "app": {
     "appId": 1000001,
-    "appName": "ZeepCompanion",
+    "appName": "ZeppCompanion",
     "appType": "app",
     "version": {
       "code": 1,
       "name": "1.0.0"
     },
     "icon": "icon.png",
-    "vender": "ZeepCompanion",
+    "vender": "ZeppCompanion",
     "description": "A companion app for Zepp OS smartwatches"
   },
   "runtime": {
@@ -27,14 +27,20 @@
     "data:user.hd.stress",
     "data:user.hd.calorie",
     "device:os.local_storage",
-    "device:os.bg_service"
+    "device:os.bg_service",
+    "device:os.geolocation"
   ],
   "targets": {
-    "amazfit-balance": {
+    "amazfit-active": {
       "module": {
         "page": {
           "pages": [
-            "page/home/index"
+            "page/home/index",
+            "page/training-select/index",
+            "page/pre-training/index",
+            "page/active-training/index",
+            "page/training-summary/index",
+            "page/settings/index"
           ]
         },
         "app-side": {
@@ -48,8 +54,8 @@
       },
       "platforms": [
         {
-          "name": "amazfit-balance",
-          "deviceSource": 8454400,
+          "name": "amazfit-active",
+          "deviceSource": 8519936,
           "st": "r",
           "sr": "w480"
         }
@@ -59,10 +65,10 @@
   },
   "i18n": {
     "en-US": {
-      "appName": "ZeepCompanion"
+      "appName": "ZeppCompanion"
     },
     "es-ES": {
-      "appName": "ZeepCompanion"
+      "appName": "ZeppCompanion"
     }
   },
   "defaultLanguage": "en-US"
