@@ -1,5 +1,5 @@
 msgid "app_name"
-msgstr "ZeepCompanion"
+msgstr "ZeppCompanion"
 
 msgid "heart_rate"
 msgstr "Heart Rate"
@@ -12,3 +12,60 @@ msgstr "Battery"
 
 msgid "settings"
 msgstr "Settings"
+
+msgid "start_training"
+msgstr "Start Training"
+
+msgid "history"
+msgstr "History"
+
+msgid "trainings"
+msgstr "Trainings"
+
+msgid "pre_training"
+msgstr "Ready to train!"
+
+msgid "start_button"
+msgstr "START"
+
+msgid "pause"
+msgstr "Pause"
+
+msgid "finish"
+msgstr "Finish"
+
+msgid "summary"
+msgstr "Summary"
+
+msgid "total_time"
+msgstr "Total time"
+
+msgid "distance"
+msgstr "Distance"
+
+msgid "avg_hr"
+msgstr "Avg HR"
+
+msgid "avg_pace"
+msgstr "Avg pace"
+
+msgid "back_home"
+msgstr "Back to home"
+
+msgid "no_trainings"
+msgstr "No trainings available.\nCreate one from the web."
+
+msgid "loading"
+msgstr "Loading..."
+
+msgid "no_connection"
+msgstr "No connection"
+
+msgid "msg_freq_high"
+msgstr "High (every 60s)"
+
+msgid "msg_freq_medium"
+msgstr "Medium (every 90s)"
+
+msgid "msg_freq_low"
+msgstr "Low (every 120s)"
