@@ -1,12 +1,14 @@
 import { createWidget, widget, prop, align, text_style } from '@zos/ui'
 import { replace } from '@zos/router'
 import { getApp } from '@zos/device'
+import { BasePage } from '@zeppos/zml/base-page'
 import { COLORS, FONT, SCREEN, LAYOUT } from '../../utils/constants'
 import { formatTimeLong, formatPace, formatDistance, formatHR } from '../../utils/format'
 
 var app = getApp()
 
-Page({
+Page(
+  BasePage({
   build() {
     var session = app.globalData.trainingSession
     var training = app.globalData.currentTraining
@@ -172,4 +174,5 @@ Page({
       },
     })
   },
-})
+  })
+)

@@ -1,12 +1,14 @@
 import { createWidget, widget, prop, align, text_style } from '@zos/ui'
 import { back } from '@zos/router'
 import { getApp } from '@zos/device'
+import { BasePage } from '@zeppos/zml/base-page'
 import { COLORS, FONT, SCREEN, LAYOUT } from '../../utils/constants'
 import { MESSAGE_FREQUENCY } from '../../shared/protocol'
 
 var app = getApp()
 
-Page({
+Page(
+  BasePage({
   state: {
     frequencyWidget: null,
     currentFrequency: 90,
@@ -142,4 +144,5 @@ Page({
     if (freq <= 90) return 'Media (cada 90s)'
     return 'Baja (cada 120s)'
   },
-})
+  })
+)

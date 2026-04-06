@@ -1,2 +1,2 @@
-// Re-export MessageBuilder from @zeppos/zml for device-side usage
-export { MessageBuilder } from '@zeppos/zml/device'
+// Messaging is handled by BasePage/BaseApp from @zeppos/zml
+// This file kept for backwards compatibility
