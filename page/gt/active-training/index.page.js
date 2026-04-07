@@ -44,63 +44,54 @@ var FONT = {
 // Layout
 // ---------------------------------------------------------------------------
 var AT = {
-  TIME_X: 0,
-  TIME_Y: px(36),
-  TIME_W: W,
-  TIME_H: px(50),
-  TIME_SIZE: px(38),
+  // Timer is the hero metric
+  TIME_Y: px(30),
+  TIME_SIZE: px(42),
 
-  ARC_X: px(30),
-  ARC_Y: px(70),
-  ARC_SIZE: px(420),
-  ARC_STROKE: px(8),
+  // Progress arc around the edge
+  ARC_X: px(10),
+  ARC_Y: px(10),
+  ARC_SIZE: px(460),
+  ARC_STROKE: px(6),
 
-  HR_X: 0,
-  HR_Y: px(88),
-  HR_W: W,
-  HR_H: px(52),
-  HR_SIZE: px(FONT.LARGE),
+  // HR prominent but not huge
+  HR_Y: px(90),
+  HR_SIZE: px(FONT.MEDIUM),
 
-  PACE_X: 0,
-  PACE_Y: px(150),
-  PACE_W: W,
-  PACE_H: px(34),
-  PACE_SIZE: px(FONT.MEDIUM),
+  // Pace and distance side by side
+  PACE_X: px(30),
+  PACE_Y: px(135),
+  PACE_W: px(200),
 
-  DIST_X: 0,
-  DIST_Y: px(190),
-  DIST_W: W,
-  DIST_H: px(26),
-  DIST_SIZE: px(FONT.SMALL),
+  DIST_X: px(250),
+  DIST_Y: px(135),
+  DIST_W: px(200),
 
+  STAT_H: px(24),
+  STAT_SIZE: px(FONT.SMALL),
+  LABEL_SIZE: px(14),
+
+  // Mascot (compact)
   MASCOT_CX: W / 2,
-  MASCOT_CY: px(232),
-  MASCOT_R: px(52),
+  MASCOT_CY: px(210),
+  MASCOT_R: px(28),
+  MASCOT_LABEL_Y: px(200),
 
-  MASCOT_LABEL_X: 0,
-  MASCOT_LABEL_Y: px(218),
-  MASCOT_LABEL_W: W,
-  MASCOT_LABEL_H: px(28),
+  // Companion message
+  MSG_X: px(60),
+  MSG_Y: px(248),
+  MSG_W: px(360),
+  MSG_H: px(50),
+  MSG_SIZE: px(FONT.TINY),
 
-  MSG_X: px(40),
-  MSG_Y: px(295),
-  MSG_W: px(400),
-  MSG_H: px(65),
-  MSG_SIZE: px(FONT.SMALL),
-
-  BLE_X: 0,
-  BLE_Y: px(4),
-  BLE_W: W,
-  BLE_H: px(18),
-  BLE_SIZE: px(14),
-
-  BTN_Y: px(383),
-  BTN_H: px(58),
-  BTN_RADIUS: px(29),
-  PAUSE_X: px(58),
-  PAUSE_W: px(162),
+  // Buttons (must fit within round screen at this y)
+  BTN_Y: px(320),
+  BTN_H: px(46),
+  BTN_RADIUS: px(23),
+  PAUSE_X: px(80),
+  PAUSE_W: px(140),
   STOP_X: px(260),
-  STOP_W: px(162),
+  STOP_W: px(140),
 }
 
 // ---------------------------------------------------------------------------
@@ -373,6 +364,7 @@ function showCompanionMessage(result) {
     state.messageWidget.setProperty(hmUI.prop.TEXT, result.message)
   }
 
+  // Change mascot color based on mood
   if (state.mascotWidget) {
     var mascotColor = COLORS.PRIMARY
     if (result.mascotState === MASCOT_STATES.TALKING) {
@@ -509,52 +501,7 @@ function cleanup() {
 // UI construction
 // ---------------------------------------------------------------------------
 function buildUI(training, session) {
-  // Black background
-  hmUI.createWidget(hmUI.widget.FILL_RECT, {
-    x: 0,
-    y: 0,
-    w: W,
-    h: W,
-    color: COLORS.BG_DARK,
-  })
-
-  // BLE disconnect banner (empty = invisible)
-  state.disconnectWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-    x: AT.BLE_X,
-    y: AT.BLE_Y,
-    w: AT.BLE_W,
-    h: AT.BLE_H,
-    text: '',
-    text_size: AT.BLE_SIZE,
-    color: COLORS.ERROR_RED,
-    align_h: hmUI.align.CENTER_H,
-  })
-
-  // Training name (small, top, dimmed)
-  hmUI.createWidget(hmUI.widget.TEXT, {
-    x: 0,
-    y: AT.TIME_Y - px(4),
-    w: W,
-    h: px(18),
-    text: training.name || 'Entrenamiento',
-    text_size: px(14),
-    color: COLORS.TEXT_DIMMED,
-    align_h: hmUI.align.CENTER_H,
-  })
-
-  // Elapsed time
-  state.timeWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-    x: AT.TIME_X,
-    y: AT.TIME_Y + px(18),
-    w: AT.TIME_W,
-    h: AT.TIME_H,
-    text: '00:00',
-    text_size: AT.TIME_SIZE,
-    color: COLORS.WHITE,
-    align_h: hmUI.align.CENTER_H,
-  })
-
-  // Progress arc background track
+  // Progress arc background (near screen edge)
   hmUI.createWidget(hmUI.widget.ARC, {
     x: AT.ARC_X,
     y: AT.ARC_Y,
@@ -578,43 +525,79 @@ function buildUI(training, session) {
     line_width: AT.ARC_STROKE,
   })
 
+  // Elapsed time (hero metric)
+  state.timeWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    x: 0,
+    y: AT.TIME_Y,
+    w: W,
+    h: px(50),
+    text: '00:00',
+    text_size: AT.TIME_SIZE,
+    color: COLORS.WHITE,
+    align_h: hmUI.align.CENTER_H,
+  })
+
   // Heart rate
   state.hrWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-    x: AT.HR_X,
+    x: 0,
     y: AT.HR_Y,
-    w: AT.HR_W,
-    h: AT.HR_H,
+    w: W,
+    h: px(34),
     text: '-- bpm',
     text_size: AT.HR_SIZE,
     color: COLORS.HR_RED,
     align_h: hmUI.align.CENTER_H,
   })
 
-  // Pace
+  // Pace (left column)
   state.paceWidget = hmUI.createWidget(hmUI.widget.TEXT, {
     x: AT.PACE_X,
     y: AT.PACE_Y,
     w: AT.PACE_W,
-    h: AT.PACE_H,
+    h: AT.STAT_H,
     text: '--:-- /km',
-    text_size: AT.PACE_SIZE,
+    text_size: AT.STAT_SIZE,
     color: COLORS.PACE_BLUE,
     align_h: hmUI.align.CENTER_H,
   })
 
-  // Distance
+  // Pace label
+  hmUI.createWidget(hmUI.widget.TEXT, {
+    x: AT.PACE_X,
+    y: AT.PACE_Y + AT.STAT_H,
+    w: AT.PACE_W,
+    h: px(18),
+    text: 'Ritmo',
+    text_size: AT.LABEL_SIZE,
+    color: COLORS.TEXT_DIMMED,
+    align_h: hmUI.align.CENTER_H,
+  })
+
+  // Distance (right column)
   state.distWidget = hmUI.createWidget(hmUI.widget.TEXT, {
     x: AT.DIST_X,
     y: AT.DIST_Y,
     w: AT.DIST_W,
-    h: AT.DIST_H,
+    h: AT.STAT_H,
     text: '0.00 km',
-    text_size: AT.DIST_SIZE,
+    text_size: AT.STAT_SIZE,
     color: COLORS.TEXT_SECONDARY,
     align_h: hmUI.align.CENTER_H,
   })
 
-  // Mascot placeholder circle
+  // Distance label
+  hmUI.createWidget(hmUI.widget.TEXT, {
+    x: AT.DIST_X,
+    y: AT.DIST_Y + AT.STAT_H,
+    w: AT.DIST_W,
+    h: px(18),
+    text: 'Distancia',
+    text_size: AT.LABEL_SIZE,
+    color: COLORS.TEXT_DIMMED,
+    align_h: hmUI.align.CENTER_H,
+  })
+
+  // Mascot circle
   state.mascotWidget = hmUI.createWidget(hmUI.widget.CIRCLE, {
     center_x: AT.MASCOT_CX,
     center_y: AT.MASCOT_CY,
@@ -622,14 +605,14 @@ function buildUI(training, session) {
     color: COLORS.PRIMARY,
   })
 
-  // Mascot inner label
+  // Mascot label
   hmUI.createWidget(hmUI.widget.TEXT, {
-    x: AT.MASCOT_LABEL_X,
+    x: 0,
     y: AT.MASCOT_LABEL_Y,
-    w: AT.MASCOT_LABEL_W,
-    h: AT.MASCOT_LABEL_H,
+    w: W,
+    h: px(20),
     text: 'ZEEP',
-    text_size: px(FONT.BODY),
+    text_size: px(14),
     color: COLORS.WHITE,
     align_h: hmUI.align.CENTER_H,
   })
