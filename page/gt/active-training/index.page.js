@@ -611,7 +611,7 @@ function buildUI(training, session) {
     y: AT.MASCOT_LABEL_Y,
     w: W,
     h: px(20),
-    text: 'ZEEP',
+    text: 'Zepp',
     text_size: px(14),
     color: COLORS.WHITE,
     align_h: hmUI.align.CENTER_H,

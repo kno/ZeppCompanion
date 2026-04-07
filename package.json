@@ -1,16 +1,17 @@
 {
-  "name": "ZeppCompanion",
+  "name": "zeppcompanion",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "devDependencies": {
+    "@zeppos/device-types": "^3.0.0"
+  },
   "dependencies": {
-    "@zeppos/zml": "^0.0.43"
+    "@zeppos/zml": "^0.0.9"
   }
 }

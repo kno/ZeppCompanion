@@ -5,7 +5,7 @@ import { px } from "@zos/utils";
 export const { width: DEVICE_WIDTH, height: DEVICE_HEIGHT } = getDeviceInfo();
 
 export const TITLE_STYLE = {
-  text: "ZeepCompanion",
+  text: "ZeppCompanion",
   x: px(0),
   y: px(60),
   w: DEVICE_WIDTH,
@@ -34,7 +34,7 @@ export const CIRCLE_STYLE = {
 };
 
 export const CIRCLE_TEXT_STYLE = {
-  text: "ZEEP",
+  text: "Zepp",
   x: px(0),
   y: px(195),
   w: DEVICE_WIDTH,

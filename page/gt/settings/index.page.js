@@ -153,7 +153,7 @@ Page({
       y: px(380),
       w: W,
       h: px(24),
-      text: "ZeepCompanion v1.0.0",
+      text: "ZeppCompanion v1.0.0",
       text_size: px(FONT.TINY),
       color: COLORS.TEXT_DIMMED,
       align_h: hmUI.align.CENTER_H,

@@ -2,14 +2,14 @@
   "configVersion": "v3",
   "app": {
     "appId": 20001,
-    "appName": "ZeepCompanion",
+    "appName": "ZeppCompanion",
     "appType": "app",
     "version": {
       "code": 1,
       "name": "1.0.0"
     },
     "icon": "icon.png",
-    "vender": "ZeepCompanion",
+    "vender": "ZeppCompanion",
     "description": "Training companion with virtual pet for Zepp OS"
   },
   "permissions": [
@@ -53,7 +53,7 @@
   },
   "i18n": {
     "en-US": {
-      "appName": "ZeepCompanion"
+      "appName": "ZeppCompanion"
     }
   },
   "defaultLanguage": "en-US"
