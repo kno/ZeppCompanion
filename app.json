@@ -1,7 +1,7 @@
 {
   "configVersion": "v3",
   "app": {
-    "appId": 1000001,
+    "appId": 20001,
     "appName": "ZeepCompanion",
     "appType": "app",
     "version": {
@@ -12,17 +12,7 @@
     "vender": "ZeepCompanion",
     "description": "Training companion with virtual pet for Zepp OS"
   },
-  "permissions": [
-    "data:user.hd.heart_rate",
-    "data:user.hd.step",
-    "data:user.hd.spo2",
-    "data:user.hd.sleep",
-    "data:user.hd.stress",
-    "data:user.hd.calorie",
-    "device:os.local_storage",
-    "device:os.bg_service",
-    "device:os.geolocation"
-  ],
+  "permissions": ["data:os.device.info", "device:os.local_storage"],
   "runtime": {
     "apiVersion": {
       "compatible": "3.0",
@@ -30,31 +20,27 @@
       "minVersion": "3.0"
     }
   },
+  "debug": false,
   "targets": {
     "gt": {
       "module": {
         "page": {
           "pages": [
-            "page/gt/home/index",
-            "page/gt/training-select/index",
-            "page/gt/pre-training/index",
-            "page/gt/active-training/index",
-            "page/gt/training-summary/index",
-            "page/gt/settings/index"
-          ]
-        },
-        "app-side": {
-          "path": "app-side/index"
-        },
-        "app-service": {
-          "services": [
-            "app-service/index"
+            "page/gt/home/index.page",
+            "page/gt/training-select/index.page",
+            "page/gt/pre-training/index.page",
+            "page/gt/active-training/index.page",
+            "page/gt/training-summary/index.page",
+            "page/gt/settings/index.page"
           ]
         }
       },
       "platforms": [
         {
           "st": "r"
+        },
+        {
+          "st": "s"
         }
       ],
       "designWidth": 480
@@ -62,9 +48,6 @@
   },
   "i18n": {
     "en-US": {
-      "appName": "ZeepCompanion"
-    },
-    "es-ES": {
       "appName": "ZeepCompanion"
     }
   },
