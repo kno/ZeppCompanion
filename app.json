@@ -12,7 +12,12 @@
     "vender": "ZeepCompanion",
     "description": "Training companion with virtual pet for Zepp OS"
   },
-  "permissions": ["data:os.device.info", "device:os.local_storage"],
+  "permissions": [
+    "data:os.device.info",
+    "data:user.hd.heart_rate",
+    "device:os.local_storage",
+    "device:os.geolocation"
+  ],
   "runtime": {
     "apiVersion": {
       "compatible": "3.0",
