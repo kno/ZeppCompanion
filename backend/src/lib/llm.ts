@@ -7,7 +7,7 @@ export interface LLMResponse {
   content: string
 }
 
-type LLMProvider = 'openai' | 'anthropic' | 'custom'
+type LLMProvider = 'openai' | 'anthropic' | 'openrouter' | 'custom'
 
 function getConfig() {
   return {
@@ -25,6 +25,8 @@ function getBaseUrl(provider: LLMProvider, customUrl: string): string {
       return 'https://api.openai.com/v1'
     case 'anthropic':
       return 'https://api.anthropic.com/v1'
+    case 'openrouter':
+      return 'https://openrouter.ai/api/v1'
     default:
       return 'https://api.openai.com/v1'
   }
@@ -41,6 +43,10 @@ async function callOpenAICompatible(
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${config.apiKey}`,
+      ...(config.provider === 'openrouter' && {
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        'X-Title': 'ZeppCompanion',
+      }),
     },
     body: JSON.stringify({
       model: config.model,
@@ -109,6 +115,7 @@ export async function generateCompletion(messages: LLMMessage[]): Promise<LLMRes
     case 'anthropic':
       return callAnthropic(messages, config)
     case 'openai':
+    case 'openrouter':
     case 'custom':
     default:
       return callOpenAICompatible(messages, config)
