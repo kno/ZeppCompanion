@@ -26,22 +26,11 @@ export const SUBTITLE_STYLE = {
   align_h: hmUI.align.CENTER_H,
 };
 
-export const CIRCLE_STYLE = {
-  center_x: DEVICE_WIDTH / 2,
-  center_y: px(210),
-  radius: px(50),
-  color: 0x4CAF50,
-};
-
-export const CIRCLE_TEXT_STYLE = {
-  text: "Zepp",
-  x: px(0),
-  y: px(195),
-  w: DEVICE_WIDTH,
-  h: px(30),
-  color: 0xffffff,
-  text_size: px(18),
-  align_h: hmUI.align.CENTER_H,
+export const MASCOT_STYLE = {
+  x: (DEVICE_WIDTH - px(150)) / 2,
+  y: px(160),
+  w: px(150),
+  h: px(98),
 };
 
 export const BUTTON_START_STYLE = {

@@ -7,6 +7,7 @@ import { createTimer, stopTimer } from "@zos/timer"
 import { HeartRate, Geolocation } from "@zos/sensor"
 import { evaluateLocalRules, getFallbackMessage, getFinishMessage, parseHRZones } from "../../../utils/companion-engine"
 import { MASCOT_STATES } from "../../../shared/protocol"
+import { createMascotWidget } from "../../../components/mascot-widget"
 
 var logger = Logger.getLogger("active-training")
 const { width: W } = getDeviceInfo()
@@ -95,46 +96,6 @@ var AT = {
 }
 
 // ---------------------------------------------------------------------------
-// Mascot animation frames
-// ---------------------------------------------------------------------------
-var MASCOT_FRAMES = {
-  neutro: [
-    'mascot/mascota_neutro_f01.png',
-    'mascot/mascota_neutro_f02.png',
-    'mascot/mascota_neutro_f03.png',
-    'mascot/mascota_neutro_f04.png',
-    'mascot/mascota_neutro_f05.png',
-  ],
-  hablar: [
-    'mascot/mascota_hablar_f01.png',
-    'mascot/mascota_hablar_f02.png',
-    'mascot/mascota_hablar_f03.png',
-    'mascot/mascota_hablar_f04.png',
-    'mascot/mascota_hablar_f05.png',
-    'mascot/mascota_hablar_f06.png',
-    'mascot/mascota_hablar_f07.png',
-  ],
-  feliz: [
-    'mascot/mascota_feliz_f01.png',
-    'mascot/mascota_feliz_f02.png',
-    'mascot/mascota_feliz_f03.png',
-    'mascot/mascota_feliz_f04.png',
-    'mascot/mascota_feliz_f05.png',
-    'mascot/mascota_feliz_f06.png',
-    'mascot/mascota_feliz_f07.png',
-  ],
-  triste: [
-    'mascot/mascota_triste_f01.png',
-    'mascot/mascota_triste_f02.png',
-    'mascot/mascota_triste_f03.png',
-    'mascot/mascota_triste_f04.png',
-    'mascot/mascota_triste_f05.png',
-    'mascot/mascota_triste_f06.png',
-    'mascot/mascota_triste_f07.png',
-  ],
-}
-
-// ---------------------------------------------------------------------------
 // Format helpers
 // ---------------------------------------------------------------------------
 function formatTime(ms) {
@@ -188,9 +149,7 @@ var state = {
   progressArcWidget: null,
   messageWidget: null,
   disconnectWidget: null,
-  mascotWidget: null,
-  mascotAnimTimerId: null,
-  mascotFrameIdx: 0,
+  mascotComponent: null,
   mascotMood: 'neutro',
   pauseBtnWidget: null,
 
@@ -418,7 +377,9 @@ function showCompanionMessage(result) {
   }
   if (newMood !== state.mascotMood) {
     state.mascotMood = newMood
-    state.mascotFrameIdx = 0
+    if (state.mascotComponent) {
+      state.mascotComponent.setMood(newMood)
+    }
   }
 }
 
@@ -443,7 +404,9 @@ function togglePause() {
       state.messageWidget.setProperty(hmUI.prop.TEXT, 'Pausado')
     }
     state.mascotMood = 'triste'
-    state.mascotFrameIdx = 0
+    if (state.mascotComponent) {
+      state.mascotComponent.setMood('triste')
+    }
     if (state.pauseBtnWidget) {
       state.pauseBtnWidget.setProperty(hmUI.prop.TEXT, 'Reanudar')
     }
@@ -454,7 +417,9 @@ function togglePause() {
       state.messageWidget.setProperty(hmUI.prop.TEXT, 'Continuamos!')
     }
     state.mascotMood = 'neutro'
-    state.mascotFrameIdx = 0
+    if (state.mascotComponent) {
+      state.mascotComponent.setMood('neutro')
+    }
     if (state.pauseBtnWidget) {
       state.pauseBtnWidget.setProperty(hmUI.prop.TEXT, 'Pausa')
     }
@@ -502,9 +467,9 @@ function finishTraining() {
 // Cleanup
 // ---------------------------------------------------------------------------
 function cleanup() {
-  if (state.mascotAnimTimerId !== null) {
-    stopTimer(state.mascotAnimTimerId)
-    state.mascotAnimTimerId = null
+  if (state.mascotComponent) {
+    state.mascotComponent.destroy()
+    state.mascotComponent = null
   }
 
   if (state.hrPollTimerId !== null) {
@@ -644,24 +609,13 @@ function buildUI(training, session) {
     align_h: hmUI.align.CENTER_H,
   })
 
-  // Mascot image
-  state.mascotWidget = hmUI.createWidget(hmUI.widget.IMG, {
+  // Mascot component
+  state.mascotComponent = createMascotWidget({
     x: AT.MASCOT_X,
     y: AT.MASCOT_Y,
     w: AT.MASCOT_W,
     h: AT.MASCOT_H,
-    src: MASCOT_FRAMES.neutro[0],
-  })
-
-  // Start mascot animation
-  state.mascotFrameIdx = 0
-  state.mascotMood = 'neutro'
-  state.mascotAnimTimerId = createTimer(400, 400, function () {
-    var frames = MASCOT_FRAMES[state.mascotMood]
-    state.mascotFrameIdx = (state.mascotFrameIdx + 1) % frames.length
-    if (state.mascotWidget) {
-      state.mascotWidget.setProperty(hmUI.prop.SRC, frames[state.mascotFrameIdx])
-    }
+    initialMood: 'neutro',
   })
 
   // Companion message
@@ -728,9 +682,7 @@ Page({
     state.progressArcWidget = null
     state.messageWidget = null
     state.disconnectWidget = null
-    state.mascotWidget = null
-    state.mascotAnimTimerId = null
-    state.mascotFrameIdx = 0
+    state.mascotComponent = null
     state.mascotMood = 'neutro'
     state.pauseBtnWidget = null
     state.hrSensor = null

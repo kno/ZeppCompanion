@@ -4,14 +4,16 @@ import { push } from "@zos/router";
 import {
   TITLE_STYLE,
   SUBTITLE_STYLE,
-  CIRCLE_STYLE,
-  CIRCLE_TEXT_STYLE,
+  MASCOT_STYLE,
   BUTTON_START_STYLE,
   BUTTON_HISTORY_STYLE,
   BUTTON_SETTINGS_STYLE,
 } from "zosLoader:./index.page.[pf].layout.js";
+import { createMascotWidget } from "../../../components/mascot-widget";
 
 const logger = Logger.getLogger("home");
+
+var mascot = null;
 
 Page({
   onInit() {
@@ -22,8 +24,13 @@ Page({
 
     hmUI.createWidget(hmUI.widget.TEXT, TITLE_STYLE);
     hmUI.createWidget(hmUI.widget.TEXT, SUBTITLE_STYLE);
-    hmUI.createWidget(hmUI.widget.CIRCLE, CIRCLE_STYLE);
-    hmUI.createWidget(hmUI.widget.TEXT, CIRCLE_TEXT_STYLE);
+    mascot = createMascotWidget({
+      x: MASCOT_STYLE.x,
+      y: MASCOT_STYLE.y,
+      w: MASCOT_STYLE.w,
+      h: MASCOT_STYLE.h,
+      initialMood: 'neutro',
+    });
 
     hmUI.createWidget(hmUI.widget.BUTTON, {
       ...BUTTON_START_STYLE,
@@ -52,5 +59,9 @@ Page({
   },
   onDestroy() {
     logger.debug("home onDestroy");
+    if (mascot) {
+      mascot.destroy();
+      mascot = null;
+    }
   },
 });
