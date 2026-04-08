@@ -71,27 +71,67 @@ var AT = {
   STAT_SIZE: px(FONT.SMALL),
   LABEL_SIZE: px(14),
 
-  // Mascot (compact)
-  MASCOT_CX: W / 2,
-  MASCOT_CY: px(210),
-  MASCOT_R: px(28),
-  MASCOT_LABEL_Y: px(200),
+  // Mascot image (150x98)
+  MASCOT_X: (W - px(150)) / 2,
+  MASCOT_Y: px(178),
+  MASCOT_W: px(150),
+  MASCOT_H: px(98),
 
   // Companion message
   MSG_X: px(60),
-  MSG_Y: px(248),
+  MSG_Y: px(280),
   MSG_W: px(360),
-  MSG_H: px(50),
+  MSG_H: px(45),
   MSG_SIZE: px(FONT.TINY),
 
   // Buttons (must fit within round screen at this y)
-  BTN_Y: px(320),
+  BTN_Y: px(335),
   BTN_H: px(46),
   BTN_RADIUS: px(23),
   PAUSE_X: px(80),
   PAUSE_W: px(140),
   STOP_X: px(260),
   STOP_W: px(140),
+}
+
+// ---------------------------------------------------------------------------
+// Mascot animation frames
+// ---------------------------------------------------------------------------
+var MASCOT_FRAMES = {
+  neutro: [
+    'mascot/mascota_neutro_f01.png',
+    'mascot/mascota_neutro_f02.png',
+    'mascot/mascota_neutro_f03.png',
+    'mascot/mascota_neutro_f04.png',
+    'mascot/mascota_neutro_f05.png',
+  ],
+  hablar: [
+    'mascot/mascota_hablar_f01.png',
+    'mascot/mascota_hablar_f02.png',
+    'mascot/mascota_hablar_f03.png',
+    'mascot/mascota_hablar_f04.png',
+    'mascot/mascota_hablar_f05.png',
+    'mascot/mascota_hablar_f06.png',
+    'mascot/mascota_hablar_f07.png',
+  ],
+  feliz: [
+    'mascot/mascota_feliz_f01.png',
+    'mascot/mascota_feliz_f02.png',
+    'mascot/mascota_feliz_f03.png',
+    'mascot/mascota_feliz_f04.png',
+    'mascot/mascota_feliz_f05.png',
+    'mascot/mascota_feliz_f06.png',
+    'mascot/mascota_feliz_f07.png',
+  ],
+  triste: [
+    'mascot/mascota_triste_f01.png',
+    'mascot/mascota_triste_f02.png',
+    'mascot/mascota_triste_f03.png',
+    'mascot/mascota_triste_f04.png',
+    'mascot/mascota_triste_f05.png',
+    'mascot/mascota_triste_f06.png',
+    'mascot/mascota_triste_f07.png',
+  ],
 }
 
 // ---------------------------------------------------------------------------
@@ -149,6 +189,9 @@ var state = {
   messageWidget: null,
   disconnectWidget: null,
   mascotWidget: null,
+  mascotAnimTimerId: null,
+  mascotFrameIdx: 0,
+  mascotMood: 'neutro',
   pauseBtnWidget: null,
 
   hrSensor: null,
@@ -364,17 +407,18 @@ function showCompanionMessage(result) {
     state.messageWidget.setProperty(hmUI.prop.TEXT, result.message)
   }
 
-  // Change mascot color based on mood
-  if (state.mascotWidget) {
-    var mascotColor = COLORS.PRIMARY
-    if (result.mascotState === MASCOT_STATES.TALKING) {
-      mascotColor = COLORS.ACCENT
-    } else if (result.mascotState === MASCOT_STATES.CELEBRATING) {
-      mascotColor = COLORS.PROGRESS_GREEN
-    } else if (result.mascotState === MASCOT_STATES.WORRIED) {
-      mascotColor = COLORS.ERROR_RED
-    }
-    state.mascotWidget.setProperty(hmUI.prop.MORE, { color: mascotColor })
+  // Change mascot mood animation
+  var newMood = 'neutro'
+  if (result.mascotState === MASCOT_STATES.CELEBRATING) {
+    newMood = 'feliz'
+  } else if (result.mascotState === MASCOT_STATES.TALKING) {
+    newMood = 'hablar'
+  } else if (result.mascotState === MASCOT_STATES.WORRIED) {
+    newMood = 'triste'
+  }
+  if (newMood !== state.mascotMood) {
+    state.mascotMood = newMood
+    state.mascotFrameIdx = 0
   }
 }
 
@@ -398,9 +442,8 @@ function togglePause() {
     if (state.messageWidget) {
       state.messageWidget.setProperty(hmUI.prop.TEXT, 'Pausado')
     }
-    if (state.mascotWidget) {
-      state.mascotWidget.setProperty(hmUI.prop.MORE, { color: COLORS.TEXT_DIMMED })
-    }
+    state.mascotMood = 'triste'
+    state.mascotFrameIdx = 0
     if (state.pauseBtnWidget) {
       state.pauseBtnWidget.setProperty(hmUI.prop.TEXT, 'Reanudar')
     }
@@ -410,9 +453,8 @@ function togglePause() {
     if (state.messageWidget) {
       state.messageWidget.setProperty(hmUI.prop.TEXT, 'Continuamos!')
     }
-    if (state.mascotWidget) {
-      state.mascotWidget.setProperty(hmUI.prop.MORE, { color: COLORS.PRIMARY })
-    }
+    state.mascotMood = 'neutro'
+    state.mascotFrameIdx = 0
     if (state.pauseBtnWidget) {
       state.pauseBtnWidget.setProperty(hmUI.prop.TEXT, 'Pausa')
     }
@@ -460,6 +502,11 @@ function finishTraining() {
 // Cleanup
 // ---------------------------------------------------------------------------
 function cleanup() {
+  if (state.mascotAnimTimerId !== null) {
+    stopTimer(state.mascotAnimTimerId)
+    state.mascotAnimTimerId = null
+  }
+
   if (state.hrPollTimerId !== null) {
     stopTimer(state.hrPollTimerId)
     state.hrPollTimerId = null
@@ -597,24 +644,24 @@ function buildUI(training, session) {
     align_h: hmUI.align.CENTER_H,
   })
 
-  // Mascot circle
-  state.mascotWidget = hmUI.createWidget(hmUI.widget.CIRCLE, {
-    center_x: AT.MASCOT_CX,
-    center_y: AT.MASCOT_CY,
-    radius: AT.MASCOT_R,
-    color: COLORS.PRIMARY,
+  // Mascot image
+  state.mascotWidget = hmUI.createWidget(hmUI.widget.IMG, {
+    x: AT.MASCOT_X,
+    y: AT.MASCOT_Y,
+    w: AT.MASCOT_W,
+    h: AT.MASCOT_H,
+    src: MASCOT_FRAMES.neutro[0],
   })
 
-  // Mascot label
-  hmUI.createWidget(hmUI.widget.TEXT, {
-    x: 0,
-    y: AT.MASCOT_LABEL_Y,
-    w: W,
-    h: px(20),
-    text: 'Zepp',
-    text_size: px(14),
-    color: COLORS.WHITE,
-    align_h: hmUI.align.CENTER_H,
+  // Start mascot animation
+  state.mascotFrameIdx = 0
+  state.mascotMood = 'neutro'
+  state.mascotAnimTimerId = createTimer(400, 400, function () {
+    var frames = MASCOT_FRAMES[state.mascotMood]
+    state.mascotFrameIdx = (state.mascotFrameIdx + 1) % frames.length
+    if (state.mascotWidget) {
+      state.mascotWidget.setProperty(hmUI.prop.SRC, frames[state.mascotFrameIdx])
+    }
   })
 
   // Companion message
@@ -682,6 +729,9 @@ Page({
     state.messageWidget = null
     state.disconnectWidget = null
     state.mascotWidget = null
+    state.mascotAnimTimerId = null
+    state.mascotFrameIdx = 0
+    state.mascotMood = 'neutro'
     state.pauseBtnWidget = null
     state.hrSensor = null
     state.hrCallback = null
