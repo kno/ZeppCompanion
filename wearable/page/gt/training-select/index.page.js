@@ -47,24 +47,34 @@ Page({
     // Enable scrolling for the full page
     hmUI.setScrollView(true);
 
-    // --- Fixed header (will scroll with page, but placed at top) ---
+    // --- Header ---
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
-      y: px(45),
+      y: px(20),
       w: W,
-      h: px(36),
+      h: px(30),
       text: "Elige tu entreno",
-      text_size: px(26),
-      color: 0xFFFFFF,
+      text_size: px(24),
+      color: 0x4CAF50,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
     });
 
+    // Subtle separator line
+    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+      x: (W - px(120)) / 2,
+      y: px(54),
+      w: px(120),
+      h: px(2),
+      radius: px(1),
+      color: 0x333333,
+    });
+
     // --- Training cards ---
     var cardW = px(380);
-    var cardH = px(80);
-    var gap = px(12);
-    var startY = px(100); // below header
+    var cardH = px(76);
+    var gap = px(8);
+    var startY = px(68);
 
     for (var i = 0; i < MOCK_TRAININGS.length; i++) {
       var training = MOCK_TRAININGS[i];
