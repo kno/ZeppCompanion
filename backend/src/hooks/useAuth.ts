@@ -36,9 +36,10 @@ export function useAuth() {
   }, [router])
 
   const apiFetch = useCallback(async (path: string, options: RequestInit = {}) => {
+    const currentToken = sessionStorage.getItem('accessToken')
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      'Authorization': `Bearer ${currentToken}`,
       ...options.headers,
     }
     const res = await fetch(path, { ...options, headers })
@@ -47,7 +48,7 @@ export function useAuth() {
       throw new Error('Unauthorized')
     }
     return res.json()
-  }, [token, logout])
+  }, [logout])
 
   return { user, token, loading, logout, apiFetch }
 }
