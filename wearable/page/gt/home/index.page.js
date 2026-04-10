@@ -1,7 +1,9 @@
 import * as hmUI from "@zos/ui";
 import { log as Logger } from "@zos/utils";
 import { replace, push } from "@zos/router";
+import { BasePage } from "@zeppos/zml/base-page";
 import {
+  DEVICE_WIDTH,
   TITLE_STYLE,
   SUBTITLE_STYLE,
   MASCOT_STYLE,
@@ -14,54 +16,160 @@ import { createMascotWidget } from "../../../components/mascot-widget";
 const logger = Logger.getLogger("home");
 
 var mascot = null;
+var loadingWidgets = [];
 
-Page({
-  onInit() {
-    logger.debug("home onInit");
-  },
-  build() {
-    logger.debug("home build START");
+function clearLoadingWidgets() {
+  for (var i = 0; i < loadingWidgets.length; i++) {
+    hmUI.deleteWidget(loadingWidgets[i]);
+  }
+  loadingWidgets = [];
+}
 
-    hmUI.createWidget(hmUI.widget.TEXT, TITLE_STYLE);
-    hmUI.createWidget(hmUI.widget.TEXT, SUBTITLE_STYLE);
-    mascot = createMascotWidget({
-      x: MASCOT_STYLE.x,
-      y: MASCOT_STYLE.y,
-      w: MASCOT_STYLE.w,
-      h: MASCOT_STYLE.h,
-      initialMood: 'neutro',
+function showConfigUI() {
+  clearLoadingWidgets();
+
+  if (mascot) {
+    mascot.setMood("triste");
+  }
+
+  hmUI.createWidget(hmUI.widget.TEXT, {
+    x: 0,
+    y: TITLE_STYLE.y,
+    w: DEVICE_WIDTH,
+    h: TITLE_STYLE.h,
+    text: "ZeppCompanion",
+    text_size: TITLE_STYLE.text_size,
+    color: TITLE_STYLE.color,
+    align_h: hmUI.align.CENTER_H,
+  });
+
+  hmUI.createWidget(hmUI.widget.TEXT, {
+    x: DEVICE_WIDTH * 0.1,
+    y: MASCOT_STYLE.y + MASCOT_STYLE.h + 12,
+    w: DEVICE_WIDTH * 0.8,
+    h: 60,
+    text: "Configura tu cuenta en la app Zepp del telefono",
+    text_size: SUBTITLE_STYLE.text_size,
+    color: SUBTITLE_STYLE.color,
+    align_h: hmUI.align.CENTER_H,
+    wrap_h: 1,
+  });
+
+  hmUI.createWidget(hmUI.widget.BUTTON, {
+    x: (DEVICE_WIDTH - 240) / 2,
+    y: MASCOT_STYLE.y + MASCOT_STYLE.h + 82,
+    w: 240,
+    h: 48,
+    text: "Reintentar",
+    text_size: SUBTITLE_STYLE.text_size,
+    radius: 24,
+    normal_color: 0x333333,
+    press_color: 0x444444,
+    click_func: function () {
+      replace({ url: "page/gt/home/index.page" });
+    },
+  });
+}
+
+function showHomeUI(page) {
+  clearLoadingWidgets();
+
+  if (mascot) {
+    mascot.setMood("neutro");
+  }
+
+  hmUI.createWidget(hmUI.widget.TEXT, TITLE_STYLE);
+  hmUI.createWidget(hmUI.widget.TEXT, SUBTITLE_STYLE);
+
+  hmUI.createWidget(hmUI.widget.BUTTON, {
+    ...BUTTON_START_STYLE,
+    click_func: function () {
+      logger.debug("Start tapped");
+      push({ url: "page/gt/training-select/index.page" });
+    },
+  });
+
+  hmUI.createWidget(hmUI.widget.BUTTON, {
+    ...BUTTON_HISTORY_STYLE,
+    click_func: function () {
+      logger.debug("History tapped");
+    },
+  });
+
+  hmUI.createWidget(hmUI.widget.BUTTON, {
+    ...BUTTON_SETTINGS_STYLE,
+    click_func: function () {
+      logger.debug("Settings tapped");
+      replace({ url: "page/gt/settings/index.page" });
+    },
+  });
+
+  // Background fetch of trainings
+  try {
+    page.request({ method: "fetch_trainings" }).then(function (result) {
+      if (result && result.success && result.trainings) {
+        getApp().globalData.trainings = result.trainings;
+        logger.debug("Trainings fetched: " + result.trainings.length);
+      }
+    }).catch(function (err) {
+      logger.debug("fetch_trainings failed: " + err);
     });
+  } catch (e) {
+    logger.debug("fetch_trainings request error: " + e);
+  }
+}
 
-    hmUI.createWidget(hmUI.widget.BUTTON, {
-      ...BUTTON_START_STYLE,
-      click_func: function () {
-        logger.debug("Start tapped");
-        push({ url: "page/gt/training-select/index.page" });
-      },
-    });
+Page(
+  BasePage({
+    onInit() {
+      logger.debug("home onInit");
+    },
 
-    hmUI.createWidget(hmUI.widget.BUTTON, {
-      ...BUTTON_HISTORY_STYLE,
-      click_func: function () {
-        logger.debug("History tapped");
-      },
-    });
+    build() {
+      logger.debug("home build START");
 
-    hmUI.createWidget(hmUI.widget.BUTTON, {
-      ...BUTTON_SETTINGS_STYLE,
-      click_func: function () {
-        logger.debug("Settings tapped");
-        replace({ url: "page/gt/settings/index.page" });
-      },
-    });
+      // Loading state: title + mascot
+      var titleWidget = hmUI.createWidget(hmUI.widget.TEXT, TITLE_STYLE);
+      loadingWidgets.push(titleWidget);
 
-    logger.debug("home build DONE");
-  },
-  onDestroy() {
-    logger.debug("home onDestroy");
-    if (mascot) {
-      mascot.destroy();
-      mascot = null;
-    }
-  },
-});
+      mascot = createMascotWidget({
+        x: MASCOT_STYLE.x,
+        y: MASCOT_STYLE.y,
+        w: MASCOT_STYLE.w,
+        h: MASCOT_STYLE.h,
+        initialMood: "neutro",
+      });
+
+      var self = this;
+
+      try {
+        this.request({ method: "check_auth" })
+          .then(function (result) {
+            if (result && result.success && result.authenticated) {
+              showHomeUI(self);
+            } else {
+              showConfigUI();
+            }
+          })
+          .catch(function (err) {
+            logger.debug("check_auth failed: " + err);
+            showConfigUI();
+          });
+      } catch (e) {
+        logger.debug("check_auth request error: " + e);
+        showConfigUI();
+      }
+
+      logger.debug("home build DONE");
+    },
+
+    onDestroy() {
+      logger.debug("home onDestroy");
+      if (mascot) {
+        mascot.destroy();
+        mascot = null;
+      }
+      loadingWidgets = [];
+    },
+  })
+);

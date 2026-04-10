@@ -19,7 +19,7 @@ Page({
       y: px(20),
       w: W,
       h: px(30),
-      text: "Elige tu entreno v5",
+      text: "Elige tu entreno",
       text_size: px(24),
       color: 0x4CAF50,
       align_h: hmUI.align.CENTER_H,
@@ -32,8 +32,13 @@ Page({
     var startY = px(68)
     var cardX = (W - cardW) / 2
 
-    for (var i = 0; i < FALLBACK_TRAININGS.length; i++) {
-      var t = FALLBACK_TRAININGS[i]
+    var app = getApp()
+    var trainings = (app.globalData.trainings && app.globalData.trainings.length > 0)
+      ? app.globalData.trainings
+      : FALLBACK_TRAININGS
+
+    for (var i = 0; i < trainings.length; i++) {
+      var t = trainings[i]
       var cardY = startY + i * (cardH + gap)
 
       var cardBg = hmUI.createWidget(hmUI.widget.FILL_RECT, {

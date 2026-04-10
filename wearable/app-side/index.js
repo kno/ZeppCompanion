@@ -214,6 +214,14 @@ AppSideService(
       var params = req.params || {}
 
       switch (req.method) {
+        case "check_auth": {
+          var accessToken = settings.settingsStorage.getItem("accessToken") || ""
+          var authStatus = settings.settingsStorage.getItem("authStatus") || ""
+          var userName = settings.settingsStorage.getItem("userName") || ""
+          var authenticated = authStatus === "authenticated" && !!accessToken
+          res(null, { success: true, authenticated: authenticated, userName: userName })
+          break
+        }
         case "auth_login":
           handleLogin(params, res)
           break
