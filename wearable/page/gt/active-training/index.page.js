@@ -5,6 +5,7 @@ import { getDeviceInfo } from "@zos/device"
 import { replace } from "@zos/router"
 import { createTimer, stopTimer } from "@zos/timer"
 import { HeartRate, Geolocation } from "@zos/sensor"
+import { pauseDropWristScreenOff, resetDropWristScreenOff, pausePalmScreenOff, resetPalmScreenOff, setPageBrightTime } from "@zos/display"
 import { BasePage } from "@zeppos/zml/base-page"
 import { evaluateLocalRules, getFallbackMessage, getFinishMessage, parseHRZones } from "../../../utils/companion-engine"
 import { MASCOT_STATES } from "../../../shared/protocol"
@@ -342,16 +343,21 @@ function startTimers() {
   })
 
   // Delay backend + companion + sync by 5 seconds to let UI and sensors stabilize
+  logger.debug("[timer] scheduling delayed init (5s)...")
   createTimer(5000, 0, function () {
+    logger.debug("[timer] delayed init fired — creating backend session + companion timer")
     // Try to create backend session if we don't have one yet
     createBackendSession()
 
-    // Companion evaluation timer
-    var app = getApp()
-    var freqMs = ((app.globalData.userPreferences && app.globalData.userPreferences.messageFrequency) || 90) * 1000
+    // Companion evaluation timer — TEMP: 10s for testing (original uses userPreferences.messageFrequency)
+    // var app = getApp()
+    // var freqMs = ((app.globalData.userPreferences && app.globalData.userPreferences.messageFrequency) || 90) * 1000
+    var freqMs = 10000 // TEMP: 10 seconds for testing
+    logger.debug("[timer] companion timer starting with freqMs=" + freqMs)
     state.companionTimerId = createTimer(freqMs, freqMs, function () {
       try {
         if (state.paused) return
+        logger.debug("[timer] companion timer tick")
         evaluateCompanion()
       } catch (e) {
         logger.debug("Companion timer error: " + e.message)
@@ -403,6 +409,8 @@ function evaluateCompanion() {
   var session = state.session
   var training = state.training
 
+  logger.debug("[companion] evaluateCompanion called — backendSessionId=" + (session.backendSessionId || "NONE") + " pending=" + state.companionRequestPending + " backendAvailable=" + state.backendAvailable)
+
   // First check local rules (HR safety, pace correction, milestones)
   var trainingConfig = {
     paceGoalSecPerKm: training.paceGoalSecPerKm || 0,
@@ -412,42 +420,49 @@ function evaluateCompanion() {
 
   var localResult = evaluateLocalRules(session, trainingConfig)
   if (localResult) {
+    logger.debug("[companion] local rule fired: " + localResult.message)
     showCompanionMessage(localResult)
     return
   }
 
   // Try to get LLM companion message from backend
   if (session.backendSessionId && !state.companionRequestPending) {
+    logger.debug("[companion] requesting LLM from backend...")
     requestBackendCompanion(session)
     return
   }
 
   // Fallback: local motivational message
+  logger.debug("[companion] using local fallback — no backendSessionId or request pending")
   showCompanionMessage(getFallbackMessage())
 }
 
 function requestBackendCompanion(session) {
   if (!state.pageInstance) {
+    logger.debug("[companion] no pageInstance, using fallback")
     showCompanionMessage(getFallbackMessage())
     return
   }
 
   state.companionRequestPending = true
+  var requestParams = {
+    sessionId: session.backendSessionId,
+    heartRate: session.currentHR || 0,
+    pace: session.currentPace || 0,
+    distance: session.distanceMeters || 0,
+    elapsed: session.elapsedMs || 0,
+    progress: session.percentComplete || 0,
+  }
+  logger.debug("[companion] BLE request params: " + JSON.stringify(requestParams))
 
   state.pageInstance
     .request({
       method: "request_companion",
-      params: {
-        sessionId: session.backendSessionId,
-        heartRate: session.currentHR || 0,
-        pace: session.currentPace || 0,
-        distance: session.distanceMeters || 0,
-        elapsed: session.elapsedMs || 0,
-        progress: session.percentComplete || 0,
-      },
+      params: requestParams,
     })
     .then(function (data) {
       state.companionRequestPending = false
+      logger.debug("[companion] BLE response: " + JSON.stringify(data))
       if (data && data.success && data.companion) {
         var companion = data.companion
         var mascotState = MASCOT_STATES.TALKING
@@ -468,7 +483,7 @@ function requestBackendCompanion(session) {
     })
     .catch(function (err) {
       state.companionRequestPending = false
-      logger.debug("Companion request error: " + err)
+      logger.debug("[companion] BLE request FAILED: " + err)
       state.backendAvailable = false
       showCompanionMessage(getFallbackMessage())
     })
@@ -628,6 +643,11 @@ function finishTraining() {
 // Cleanup
 // ---------------------------------------------------------------------------
 function cleanup() {
+  // Restore normal screen-off behavior
+  resetDropWristScreenOff()
+  resetPalmScreenOff()
+  logger.debug("active-training: screen keep-alive disabled")
+
   if (state.mascotComponent) {
     state.mascotComponent.destroy()
     state.mascotComponent = null
@@ -900,6 +920,12 @@ Page(
         })
         return
       }
+
+      // Prevent OS from killing the page on wrist-down or palm-cover
+      pauseDropWristScreenOff({ duration: 0 })
+      pausePalmScreenOff({ duration: 0 })
+      setPageBrightTime({ brightTime: 3600000 })
+      logger.debug("active-training: screen keep-alive enabled")
 
       buildUI(training, session)
       startTimers()

@@ -18,8 +18,12 @@ function getFallback() {
 }
 
 export async function POST(req: NextRequest) {
+  console.log('[companion] POST /api/companion/message received')
   const auth = authenticateRequest(req)
-  if (!auth) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!auth) {
+    console.log('[companion] auth failed')
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
 
   try {
     const body = await req.json()
@@ -37,9 +41,10 @@ export async function POST(req: NextRequest) {
     })
 
     if (!session) {
-      // If no session found, return fallback (watch may have stale session ID)
+      console.log('[companion] session not found for id=' + sessionId + ' userId=' + auth.userId)
       return NextResponse.json({ data: getFallback() })
     }
+    console.log('[companion] session found, training=' + session.training.name)
 
     // Store data point
     await prisma.sessionDataPoint.create({
@@ -77,28 +82,26 @@ export async function POST(req: NextRequest) {
 
     try {
       // Call LLM with 5 second timeout
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 5000)
-
       const systemPrompt = buildCompanionSystemPrompt(training.companionStyle)
       const userPrompt = buildCompanionUserPrompt(context)
 
+      console.log('[companion] calling LLM...')
       const response = await generateCompletion([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
-      ])
-
-      clearTimeout(timeout)
+      ], 5000)
+      console.log('[companion] LLM raw response: ' + response.content)
 
       // Parse JSON response from LLM
       result = JSON.parse(response.content)
 
       // Validate required fields
       if (!result.message || !result.tone || !result.mascot_state) {
+        console.log('[companion] LLM response missing fields, using fallback')
         result = getFallback()
       }
     } catch (llmError) {
-      console.error('LLM error, using fallback:', llmError)
+      console.error('[companion] LLM error, using fallback:', llmError)
       result = getFallback()
     }
 

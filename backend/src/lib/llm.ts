@@ -34,11 +34,13 @@ function getBaseUrl(provider: LLMProvider, customUrl: string): string {
 
 async function callOpenAICompatible(
   messages: LLMMessage[],
-  config: ReturnType<typeof getConfig>
+  config: ReturnType<typeof getConfig>,
+  signal?: AbortSignal
 ): Promise<LLMResponse> {
   const baseUrl = getBaseUrl(config.provider, config.baseUrl)
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
+    signal,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -68,7 +70,8 @@ async function callOpenAICompatible(
 
 async function callAnthropic(
   messages: LLMMessage[],
-  config: ReturnType<typeof getConfig>
+  config: ReturnType<typeof getConfig>,
+  signal?: AbortSignal
 ): Promise<LLMResponse> {
   const baseUrl = getBaseUrl(config.provider, config.baseUrl)
 
@@ -77,6 +80,7 @@ async function callAnthropic(
   const userMessages = messages.filter(m => m.role !== 'system')
 
   const response = await fetch(`${baseUrl}/messages`, {
+    signal,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -104,20 +108,27 @@ async function callAnthropic(
   return { content: data.content[0].text }
 }
 
-export async function generateCompletion(messages: LLMMessage[]): Promise<LLMResponse> {
+export async function generateCompletion(messages: LLMMessage[], timeoutMs = 10000): Promise<LLMResponse> {
   const config = getConfig()
 
   if (!config.apiKey) {
     throw new Error('LLM_API_KEY not configured')
   }
 
-  switch (config.provider) {
-    case 'anthropic':
-      return callAnthropic(messages, config)
-    case 'openai':
-    case 'openrouter':
-    case 'custom':
-    default:
-      return callOpenAICompatible(messages, config)
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    switch (config.provider) {
+      case 'anthropic':
+        return await callAnthropic(messages, config, controller.signal)
+      case 'openai':
+      case 'openrouter':
+      case 'custom':
+      default:
+        return await callOpenAICompatible(messages, config, controller.signal)
+    }
+  } finally {
+    clearTimeout(timeoutId)
   }
 }

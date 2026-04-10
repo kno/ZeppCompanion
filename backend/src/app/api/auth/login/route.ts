@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       data: {
         user: { id: user.id, email: user.email, name: user.name },
         accessToken,
+        refreshToken,
       },
     })
 

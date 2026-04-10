@@ -4,7 +4,14 @@ import { verifyRefreshToken, signAccessToken, signRefreshToken } from '@/lib/aut
 
 export async function POST(req: NextRequest) {
   try {
-    const refreshToken = req.cookies.get('refreshToken')?.value
+    // Accept refresh token from body (wearable) or cookie (web)
+    let refreshToken = req.cookies.get('refreshToken')?.value
+    try {
+      const body = await req.json()
+      if (body.refreshToken) refreshToken = body.refreshToken
+    } catch {
+      // No body, use cookie
+    }
     if (!refreshToken) {
       return NextResponse.json({ error: 'No refresh token' }, { status: 401 })
     }
@@ -24,7 +31,7 @@ export async function POST(req: NextRequest) {
     const newRefreshToken = signRefreshToken(newPayload)
 
     const response = NextResponse.json({
-      data: { accessToken: newAccessToken },
+      data: { accessToken: newAccessToken, refreshToken: newRefreshToken },
     })
 
     response.cookies.set('refreshToken', newRefreshToken, {

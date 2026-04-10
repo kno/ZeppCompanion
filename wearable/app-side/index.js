@@ -15,6 +15,14 @@ function setAccessToken(token) {
   settings.settingsStorage.setItem("accessToken", token)
 }
 
+function getRefreshToken() {
+  return settings.settingsStorage.getItem("refreshToken") || ""
+}
+
+function setRefreshToken(token) {
+  settings.settingsStorage.setItem("refreshToken", token)
+}
+
 function setAuthStatus(status, userName) {
   settings.settingsStorage.setItem("authStatus", status)
   if (userName) {
@@ -26,7 +34,56 @@ function setAuthStatus(status, userName) {
  * Generic API request to the backend.
  * All successful responses are wrapped in { data: ... } by the backend.
  */
-async function apiRequest(path, options) {
+var _refreshing = false
+
+async function tryRefreshToken() {
+  var rt = getRefreshToken()
+  if (!rt) {
+    console.log("[side] no refresh token stored, cannot refresh")
+    return false
+  }
+  if (_refreshing) return false
+  _refreshing = true
+
+  try {
+    var base = getApiBase()
+    console.log("[side] attempting token refresh...")
+    var response = await fetch({
+      url: base + "/api/auth/refresh",
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: rt }),
+    })
+
+    var body =
+      typeof response.body === "string"
+        ? JSON.parse(response.body)
+        : response.body
+
+    if (response.status >= 400) {
+      console.log("[side] token refresh failed: " + response.status)
+      return false
+    }
+
+    var data = body && body.data !== undefined ? body.data : body
+    if (data && data.accessToken) {
+      setAccessToken(data.accessToken)
+      if (data.refreshToken) {
+        setRefreshToken(data.refreshToken)
+      }
+      console.log("[side] token refresh successful")
+      return true
+    }
+    return false
+  } catch (e) {
+    console.log("[side] token refresh error: " + e.message)
+    return false
+  } finally {
+    _refreshing = false
+  }
+}
+
+async function apiRequest(path, options, _isRetry) {
   var opts = options || {}
   var base = getApiBase()
   var token = getAccessToken()
@@ -55,6 +112,15 @@ async function apiRequest(path, options) {
       ? JSON.parse(response.body)
       : response.body
 
+  // Auto-refresh on 401 (expired token) — retry once
+  if (response.status === 401 && !_isRetry) {
+    console.log("[side] got 401, trying token refresh...")
+    var refreshed = await tryRefreshToken()
+    if (refreshed) {
+      return apiRequest(path, options, true)
+    }
+  }
+
   if (response.status >= 400) {
     var errorMsg = (body && body.error) || "Error " + response.status
     throw new Error(errorMsg)
@@ -79,6 +145,9 @@ async function handleLogin(params, res) {
     })
 
     setAccessToken(result.accessToken)
+    if (result.refreshToken) {
+      setRefreshToken(result.refreshToken)
+    }
     var name =
       (result.user && result.user.name) ||
       (result.user && result.user.email) ||
@@ -134,22 +203,26 @@ async function handleTrainingUpdate(params, res) {
 async function handleRequestCompanion(params, res) {
   try {
     var elapsedSec = Math.round((params.elapsed || 0) / 1000)
+    var body = {
+      sessionId: params.sessionId,
+      metrics: {
+        heart_rate: Math.round(params.heartRate || 0),
+        pace_sec_per_km: Math.round(params.pace || 0),
+        elapsed_sec: elapsedSec,
+        distance_m: Math.round(params.distance || 0),
+        progress_pct: Math.min(1, Math.max(0, params.progress || 0)),
+      },
+    }
+    console.log("[side][companion] POST /api/companion/message body=" + JSON.stringify(body))
     var result = await apiRequest("/api/companion/message", {
       method: "POST",
-      body: {
-        sessionId: params.sessionId,
-        metrics: {
-          heart_rate: Math.round(params.heartRate || 0),
-          pace_sec_per_km: Math.round(params.pace || 0),
-          elapsed_sec: elapsedSec,
-          distance_m: Math.round(params.distance || 0),
-          progress_pct: Math.min(1, Math.max(0, params.progress || 0)),
-        },
-      },
+      body: body,
     })
+    console.log("[side][companion] response=" + JSON.stringify(result))
     // result = { message, tone, mascot_state }
     res(null, { success: true, companion: result })
   } catch (error) {
+    console.log("[side][companion] ERROR: " + error.message)
     res(null, { success: false, error: error.message })
   }
 }
