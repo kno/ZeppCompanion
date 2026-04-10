@@ -1,6 +1,6 @@
 import * as hmUI from "@zos/ui";
 import { log as Logger } from "@zos/utils";
-import { push } from "@zos/router";
+import { replace, push } from "@zos/router";
 import {
   TITLE_STYLE,
   SUBTITLE_STYLE,
@@ -51,7 +51,7 @@ Page({
       ...BUTTON_SETTINGS_STYLE,
       click_func: function () {
         logger.debug("Settings tapped");
-        push({ url: "page/gt/settings/index.page" });
+        replace({ url: "page/gt/settings/index.page" });
       },
     });
 

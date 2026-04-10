@@ -5,6 +5,7 @@ import { getDeviceInfo } from "@zos/device"
 import { replace } from "@zos/router"
 import { createTimer, stopTimer } from "@zos/timer"
 import { HeartRate, Geolocation } from "@zos/sensor"
+import { BasePage } from "@zeppos/zml/base-page"
 import { evaluateLocalRules, getFallbackMessage, getFinishMessage, parseHRZones } from "../../../utils/companion-engine"
 import { MASCOT_STATES } from "../../../shared/protocol"
 import { createMascotWidget } from "../../../components/mascot-widget"
@@ -45,21 +46,17 @@ var FONT = {
 // Layout
 // ---------------------------------------------------------------------------
 var AT = {
-  // Timer is the hero metric
   TIME_Y: px(30),
   TIME_SIZE: px(42),
 
-  // Progress arc around the edge
   ARC_X: px(10),
   ARC_Y: px(10),
   ARC_SIZE: px(460),
   ARC_STROKE: px(6),
 
-  // HR prominent but not huge
   HR_Y: px(90),
   HR_SIZE: px(FONT.MEDIUM),
 
-  // Pace and distance side by side
   PACE_X: px(30),
   PACE_Y: px(135),
   PACE_W: px(200),
@@ -72,20 +69,17 @@ var AT = {
   STAT_SIZE: px(FONT.SMALL),
   LABEL_SIZE: px(14),
 
-  // Mascot image (150x98)
   MASCOT_X: (W - px(150)) / 2,
   MASCOT_Y: px(178),
   MASCOT_W: px(150),
   MASCOT_H: px(98),
 
-  // Companion message
   MSG_X: px(60),
   MSG_Y: px(280),
   MSG_W: px(360),
   MSG_H: px(45),
   MSG_SIZE: px(FONT.TINY),
 
-  // Buttons (must fit within round screen at this y)
   BTN_Y: px(335),
   BTN_H: px(46),
   BTN_RADIUS: px(23),
@@ -138,6 +132,8 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 // Page state (module-level to avoid `this` issues in callbacks)
 // ---------------------------------------------------------------------------
 var state = {
+  initialized: false,
+
   uiTimerId: null,
   companionTimerId: null,
   syncTimerId: null,
@@ -171,6 +167,13 @@ var state = {
   lastLng: null,
   lastGpsTime: 0,
   totalDistance: 0,
+
+  // Page instance for BLE requests
+  pageInstance: null,
+  // Track whether we have backend connectivity
+  backendAvailable: false,
+  // Prevent concurrent companion requests
+  companionRequestPending: false,
 }
 
 // ---------------------------------------------------------------------------
@@ -188,6 +191,9 @@ function updateHR() {
   if (!session) return
   session.currentHR = bpm
 
+  if (state.hrReadingsAll.length >= 1000) {
+    state.hrReadingsAll.shift()
+  }
   state.hrReadingsAll.push(bpm)
   if (bpm > state.maxHR) {
     state.maxHR = bpm
@@ -203,8 +209,73 @@ function updateHR() {
   }
 }
 
+function startGPS() {
+  try {
+    state.geoSensor = new Geolocation()
+    state.geoSensor.start()
+
+    state.gpsTimerId = createTimer(3000, 3000, function () {
+      try {
+        if (state.paused) return
+        if (!state.geoSensor) return
+
+        var geoStatus = state.geoSensor.getStatus()
+        if (geoStatus !== 'A') return
+
+        var lat = state.geoSensor.getLatitude()
+        var lng = state.geoSensor.getLongitude()
+        if (!lat || !lng) return
+
+        var now = Date.now()
+        var deltaDistance = 0
+        var pace = 0
+
+        if (state.lastLat !== null && state.lastLng !== null) {
+          deltaDistance = haversineDistance(state.lastLat, state.lastLng, lat, lng)
+          if (deltaDistance < 2) return
+
+          state.totalDistance = state.totalDistance + deltaDistance
+
+          var deltaTimeMs = now - state.lastGpsTime
+          if (deltaTimeMs > 0 && deltaDistance > 0) {
+            var deltaTimeSec = deltaTimeMs / 1000
+            var deltaKm = deltaDistance / 1000
+            pace = Math.round(deltaTimeSec / deltaKm)
+          }
+        }
+
+        state.lastLat = lat
+        state.lastLng = lng
+        state.lastGpsTime = now
+
+        var session = state.session
+        session.distanceMeters = state.totalDistance
+
+        if (pace > 0) {
+          session.currentPace = pace
+          if (state.paceWidget) {
+            state.paceWidget.setProperty(hmUI.prop.TEXT, formatPace(pace))
+          }
+        }
+
+        session.lastGpsLat = lat
+        session.lastGpsLng = lng
+        session.lastGpsTimestamp = now
+
+        if (state.distWidget) {
+          var km = (state.totalDistance / 1000).toFixed(2)
+          state.distWidget.setProperty(hmUI.prop.TEXT, km + ' km')
+        }
+      } catch (e) {
+        logger.debug("GPS timer error: " + e.message)
+      }
+    })
+  } catch (e) {
+    logger.debug("Geolocation sensor not available: " + e.message)
+  }
+}
+
 function startSensors() {
-  // Heart rate (may fail in emulator)
   try {
     state.hrSensor = new HeartRate()
     state.hrCallback = function () {
@@ -213,73 +284,22 @@ function startSensors() {
     }
     state.hrSensor.onCurrentChange(state.hrCallback)
 
-    // Polling fallback: some emulators don't fire onCurrentChange
     state.hrPollTimerId = createTimer(2000, 2000, function () {
-      if (state.paused) return
-      updateHR()
+      try {
+        if (state.paused) return
+        updateHR()
+      } catch (e) {
+        logger.debug("HR poll timer error: " + e.message)
+      }
     })
   } catch (e) {
     logger.debug("HeartRate sensor not available: " + e.message)
   }
 
-  // GPS (may fail in emulator)
-  try {
-    state.geoSensor = new Geolocation()
-    state.geoSensor.start()
-
-    state.gpsTimerId = createTimer(3000, 3000, function () {
-      if (state.paused) return
-      var geoStatus = state.geoSensor.getStatus()
-      if (geoStatus !== 'A') return
-
-      var lat = state.geoSensor.getLatitude()
-      var lng = state.geoSensor.getLongitude()
-      if (!lat || !lng) return
-
-      var now = Date.now()
-      var deltaDistance = 0
-      var pace = 0
-
-      if (state.lastLat !== null && state.lastLng !== null) {
-        deltaDistance = haversineDistance(state.lastLat, state.lastLng, lat, lng)
-        if (deltaDistance < 2) return
-
-        state.totalDistance = state.totalDistance + deltaDistance
-
-        var deltaTimeMs = now - state.lastGpsTime
-        if (deltaTimeMs > 0 && deltaDistance > 0) {
-          var deltaTimeSec = deltaTimeMs / 1000
-          var deltaKm = deltaDistance / 1000
-          pace = Math.round(deltaTimeSec / deltaKm)
-        }
-      }
-
-      state.lastLat = lat
-      state.lastLng = lng
-      state.lastGpsTime = now
-
-      var session = state.session
-      session.distanceMeters = state.totalDistance
-
-      if (pace > 0) {
-        session.currentPace = pace
-        if (state.paceWidget) {
-          state.paceWidget.setProperty(hmUI.prop.TEXT, formatPace(pace))
-        }
-      }
-
-      session.lastGpsLat = lat
-      session.lastGpsLng = lng
-      session.lastGpsTimestamp = now
-
-      if (state.distWidget) {
-        var km = (state.totalDistance / 1000).toFixed(2)
-        state.distWidget.setProperty(hmUI.prop.TEXT, km + ' km')
-      }
-    })
-  } catch (e) {
-    logger.debug("Geolocation sensor not available: " + e.message)
-  }
+  // Delay GPS init by 3 seconds to avoid simultaneous hardware startup
+  createTimer(3000, 0, function () {
+    startGPS()
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -288,57 +308,102 @@ function startSensors() {
 function startTimers() {
   // UI refresh: 1 second
   state.uiTimerId = createTimer(1000, 1000, function () {
-    if (state.paused) return
+    try {
+      if (state.paused) return
 
-    var session = state.session
-    var training = state.training
+      var session = state.session
+      var training = state.training
 
-    session.elapsedMs = Date.now() - session.startTimestamp
+      session.elapsedMs = Date.now() - session.startTimestamp
 
-    if (state.timeWidget) {
-      state.timeWidget.setProperty(hmUI.prop.TEXT, formatTime(session.elapsedMs))
-    }
-
-    if (training && training.durationMinutes) {
-      var targetMs = training.durationMinutes * 60 * 1000
-      session.percentComplete = calculateProgress(session.elapsedMs, targetMs)
-
-      if (state.progressArcWidget) {
-        var endAngle = -90 + (session.percentComplete * 360)
-        if (endAngle > 270) endAngle = 270
-        state.progressArcWidget.setProperty(hmUI.prop.MORE, {
-          end_angle: endAngle,
-        })
+      if (state.timeWidget) {
+        state.timeWidget.setProperty(hmUI.prop.TEXT, formatTime(session.elapsedMs))
       }
 
-      if (session.percentComplete >= 1.0 && session.status === 'running') {
-        finishTraining()
+      if (training && training.durationMinutes) {
+        var targetMs = training.durationMinutes * 60 * 1000
+        session.percentComplete = calculateProgress(session.elapsedMs, targetMs)
+
+        if (state.progressArcWidget) {
+          var endAngle = -90 + (session.percentComplete * 360)
+          if (endAngle > 270) endAngle = 270
+          state.progressArcWidget.setProperty(hmUI.prop.MORE, {
+            end_angle: endAngle,
+          })
+        }
+
+        if (session.percentComplete >= 1.0 && session.status === 'running') {
+          finishTraining()
+        }
       }
+    } catch (e) {
+      logger.debug("UI timer error: " + e.message)
     }
   })
 
-  // Companion evaluation timer
-  var app = getApp()
-  var freqMs = ((app.globalData.userPreferences && app.globalData.userPreferences.messageFrequency) || 90) * 1000
-  state.companionTimerId = createTimer(freqMs, freqMs, function () {
-    if (state.paused) return
-    evaluateCompanion()
-  })
+  // Delay backend + companion + sync by 5 seconds to let UI and sensors stabilize
+  createTimer(5000, 0, function () {
+    // Try to create backend session if we don't have one yet
+    createBackendSession()
 
-  // Backend sync: every 30 seconds
-  state.syncTimerId = createTimer(30000, 30000, function () {
-    if (state.paused) return
-    syncToBackend()
+    // Companion evaluation timer
+    var app = getApp()
+    var freqMs = ((app.globalData.userPreferences && app.globalData.userPreferences.messageFrequency) || 90) * 1000
+    state.companionTimerId = createTimer(freqMs, freqMs, function () {
+      try {
+        if (state.paused) return
+        evaluateCompanion()
+      } catch (e) {
+        logger.debug("Companion timer error: " + e.message)
+      }
+    })
+
+    // Backend sync: every 30 seconds
+    state.syncTimerId = createTimer(30000, 30000, function () {
+      try {
+        if (state.paused) return
+        syncToBackend()
+      } catch (e) {
+        logger.debug("Sync timer error: " + e.message)
+      }
+    })
   })
 }
 
 // ---------------------------------------------------------------------------
-// Companion logic
+// Backend session creation (deferred from pre-training for stability)
+// ---------------------------------------------------------------------------
+function createBackendSession() {
+  if (!state.pageInstance || !state.training) return
+  var session = state.session
+  if (!session || session.backendSessionId) return
+
+  state.pageInstance
+    .request({
+      method: "start_training",
+      params: { trainingId: state.training.id },
+    })
+    .then(function (data) {
+      if (data && data.success && data.session) {
+        session.backendSessionId = data.session.id
+        state.backendAvailable = true
+        logger.debug("Backend session created: " + session.backendSessionId)
+      }
+    })
+    .catch(function (err) {
+      logger.debug("Backend session error (non-fatal): " + err)
+      state.backendAvailable = false
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Companion logic (local + backend LLM)
 // ---------------------------------------------------------------------------
 function evaluateCompanion() {
   var session = state.session
   var training = state.training
 
+  // First check local rules (HR safety, pace correction, milestones)
   var trainingConfig = {
     paceGoalSecPerKm: training.paceGoalSecPerKm || 0,
     hrZoneMin: state.hrZones ? state.hrZones.hrZoneMin : 0,
@@ -351,8 +416,62 @@ function evaluateCompanion() {
     return
   }
 
-  // Fallback: motivational message
+  // Try to get LLM companion message from backend
+  if (session.backendSessionId && !state.companionRequestPending) {
+    requestBackendCompanion(session)
+    return
+  }
+
+  // Fallback: local motivational message
   showCompanionMessage(getFallbackMessage())
+}
+
+function requestBackendCompanion(session) {
+  if (!state.pageInstance) {
+    showCompanionMessage(getFallbackMessage())
+    return
+  }
+
+  state.companionRequestPending = true
+
+  state.pageInstance
+    .request({
+      method: "request_companion",
+      params: {
+        sessionId: session.backendSessionId,
+        heartRate: session.currentHR || 0,
+        pace: session.currentPace || 0,
+        distance: session.distanceMeters || 0,
+        elapsed: session.elapsedMs || 0,
+        progress: session.percentComplete || 0,
+      },
+    })
+    .then(function (data) {
+      state.companionRequestPending = false
+      if (data && data.success && data.companion) {
+        var companion = data.companion
+        var mascotState = MASCOT_STATES.TALKING
+        if (companion.mascot_state === "celebrating") {
+          mascotState = MASCOT_STATES.CELEBRATING
+        } else if (companion.mascot_state === "worried") {
+          mascotState = MASCOT_STATES.WORRIED
+        }
+        showCompanionMessage({
+          message: companion.message,
+          tone: companion.tone || "motivational",
+          mascotState: mascotState,
+        })
+        state.backendAvailable = true
+      } else {
+        showCompanionMessage(getFallbackMessage())
+      }
+    })
+    .catch(function (err) {
+      state.companionRequestPending = false
+      logger.debug("Companion request error: " + err)
+      state.backendAvailable = false
+      showCompanionMessage(getFallbackMessage())
+    })
 }
 
 function showCompanionMessage(result) {
@@ -384,11 +503,30 @@ function showCompanionMessage(result) {
 }
 
 // ---------------------------------------------------------------------------
-// Backend sync (fire-and-forget, BLE drops are silent)
+// Backend sync (fire-and-forget)
 // ---------------------------------------------------------------------------
 function syncToBackend() {
-  // No-op in device page — BasePage.request() not available here.
-  // Sync is handled via app-side when BLE is connected.
+  if (!state.pageInstance || !state.session || !state.session.backendSessionId) return
+
+  state.pageInstance
+    .request({
+      method: "training_update",
+      params: {
+        sessionId: state.session.backendSessionId,
+        heartRate: state.session.currentHR || 0,
+        pace: state.session.currentPace || 0,
+        distance: state.session.distanceMeters || 0,
+        elapsed: state.session.elapsedMs || 0,
+        progress: state.session.percentComplete || 0,
+      },
+    })
+    .then(function () {
+      state.backendAvailable = true
+    })
+    .catch(function (err) {
+      logger.debug("Sync error: " + err)
+      state.backendAvailable = false
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -454,6 +592,29 @@ function finishTraining() {
   var finishResult = getFinishMessage()
   showCompanionMessage(finishResult)
 
+  // Save results to backend
+  if (state.pageInstance && session.backendSessionId) {
+    state.pageInstance
+      .request({
+        method: "save_results",
+        params: {
+          sessionId: session.backendSessionId,
+          durationMs: session.elapsedMs,
+          distanceMeters: session.distanceMeters || 0,
+          avgHeartRate: avgHR,
+          maxHeartRate: state.maxHR,
+          avgPaceSecPerKm: session.currentPace || 0,
+          caloriesBurned: 0,
+        },
+      })
+      .then(function (data) {
+        logger.debug("Results saved: " + JSON.stringify(data))
+      })
+      .catch(function (err) {
+        logger.debug("Save results error: " + err)
+      })
+  }
+
   var app = getApp()
   app.globalData.trainingSession = session
 
@@ -513,7 +674,7 @@ function cleanup() {
 // UI construction
 // ---------------------------------------------------------------------------
 function buildUI(training, session) {
-  // Progress arc background (near screen edge)
+  // Progress arc background
   hmUI.createWidget(hmUI.widget.ARC, {
     x: AT.ARC_X,
     y: AT.ARC_Y,
@@ -537,7 +698,7 @@ function buildUI(training, session) {
     line_width: AT.ARC_STROKE,
   })
 
-  // Elapsed time (hero metric)
+  // Elapsed time
   state.timeWidget = hmUI.createWidget(hmUI.widget.TEXT, {
     x: 0,
     y: AT.TIME_Y,
@@ -561,7 +722,7 @@ function buildUI(training, session) {
     align_h: hmUI.align.CENTER_H,
   })
 
-  // Pace (left column)
+  // Pace
   state.paceWidget = hmUI.createWidget(hmUI.widget.TEXT, {
     x: AT.PACE_X,
     y: AT.PACE_Y,
@@ -573,7 +734,6 @@ function buildUI(training, session) {
     align_h: hmUI.align.CENTER_H,
   })
 
-  // Pace label
   hmUI.createWidget(hmUI.widget.TEXT, {
     x: AT.PACE_X,
     y: AT.PACE_Y + AT.STAT_H,
@@ -585,7 +745,7 @@ function buildUI(training, session) {
     align_h: hmUI.align.CENTER_H,
   })
 
-  // Distance (right column)
+  // Distance
   state.distWidget = hmUI.createWidget(hmUI.widget.TEXT, {
     x: AT.DIST_X,
     y: AT.DIST_Y,
@@ -597,7 +757,6 @@ function buildUI(training, session) {
     align_h: hmUI.align.CENTER_H,
   })
 
-  // Distance label
   hmUI.createWidget(hmUI.widget.TEXT, {
     x: AT.DIST_X,
     y: AT.DIST_Y + AT.STAT_H,
@@ -609,7 +768,7 @@ function buildUI(training, session) {
     align_h: hmUI.align.CENTER_H,
   })
 
-  // Mascot component
+  // Mascot
   state.mascotComponent = createMascotWidget({
     x: AT.MASCOT_X,
     y: AT.MASCOT_Y,
@@ -667,75 +826,92 @@ function buildUI(training, session) {
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
-Page({
-  onInit() {
-    logger.debug("active-training onInit")
+Page(
+  BasePage({
+    onInit() {
+      logger.debug("active-training onInit")
 
-    // Reset module state for clean start
-    state.uiTimerId = null
-    state.companionTimerId = null
-    state.syncTimerId = null
-    state.timeWidget = null
-    state.hrWidget = null
-    state.paceWidget = null
-    state.distWidget = null
-    state.progressArcWidget = null
-    state.messageWidget = null
-    state.disconnectWidget = null
-    state.mascotComponent = null
-    state.mascotMood = 'neutro'
-    state.pauseBtnWidget = null
-    state.hrSensor = null
-    state.hrCallback = null
-    state.hrPollTimerId = null
-    state.geoSensor = null
-    state.gpsTimerId = null
-    state.hrReadingsAll = []
-    state.maxHR = 0
-    state.paused = false
-    state.lastLat = null
-    state.lastLng = null
-    state.lastGpsTime = 0
-    state.totalDistance = 0
+      // Reset module state for clean start
+      state.uiTimerId = null
+      state.companionTimerId = null
+      state.syncTimerId = null
+      state.timeWidget = null
+      state.hrWidget = null
+      state.paceWidget = null
+      state.distWidget = null
+      state.progressArcWidget = null
+      state.messageWidget = null
+      state.disconnectWidget = null
+      state.mascotComponent = null
+      state.mascotMood = 'neutro'
+      state.pauseBtnWidget = null
+      state.hrSensor = null
+      state.hrCallback = null
+      state.hrPollTimerId = null
+      state.geoSensor = null
+      state.gpsTimerId = null
+      state.hrReadingsAll = []
+      state.maxHR = 0
+      state.paused = false
+      state.lastLat = null
+      state.lastLng = null
+      state.lastGpsTime = 0
+      state.totalDistance = 0
+      state.pageInstance = null
+      state.backendAvailable = false
+      state.companionRequestPending = false
+      state.initialized = false
 
-    var app = getApp()
-    state.training = app.globalData.currentTraining
-    state.session = app.globalData.trainingSession
+      var app = getApp()
+      state.training = app.globalData.currentTraining
+      state.session = app.globalData.trainingSession
 
-    if (state.training) {
-      state.hrZones = parseHRZones(state.training)
-    }
-  },
+      if (state.training) {
+        state.hrZones = parseHRZones(state.training)
+      }
+    },
 
-  build() {
-    logger.debug("active-training build START")
+    build() {
+      logger.debug("active-training build START")
 
-    var session = state.session
-    var training = state.training
+      // Guard against double initialization (Zepp OS lifecycle can call build() twice)
+      if (state.initialized) {
+        logger.debug("active-training build skipped — already initialized")
+        return
+      }
+      state.initialized = true
 
-    if (!session || !training) {
-      hmUI.createWidget(hmUI.widget.TEXT, {
-        x: 0,
-        y: px(200),
-        w: W,
-        h: px(40),
-        text: 'Error: sin sesion activa',
-        text_size: px(FONT.BODY),
-        color: COLORS.ERROR_RED,
-        align_h: hmUI.align.CENTER_H,
-      })
-      return
-    }
+      // Store page instance for BLE requests from module-level functions
+      state.pageInstance = this
 
-    buildUI(training, session)
-    startTimers()
-    startSensors()
+      var session = state.session
+      var training = state.training
 
-    logger.debug("active-training build DONE")
-  },
+      if (!session || !training) {
+        hmUI.createWidget(hmUI.widget.TEXT, {
+          x: 0,
+          y: px(200),
+          w: W,
+          h: px(40),
+          text: 'Error: sin sesion activa',
+          text_size: px(FONT.BODY),
+          color: COLORS.ERROR_RED,
+          align_h: hmUI.align.CENTER_H,
+        })
+        return
+      }
 
-  onDestroy() {
-    logger.debug("active-training onDestroy")
-    cleanup()
-  },
-})
+      buildUI(training, session)
+      startTimers()
+      startSensors()
+
+      logger.debug("active-training build DONE")
+    },
+
+    onDestroy() {
+      logger.debug("active-training onDestroy")
+      cleanup()
+      state.pageInstance = null
+    },
+  })
+)

@@ -2,7 +2,7 @@ import * as hmUI from "@zos/ui";
 import { log as Logger } from "@zos/utils";
 import { getDeviceInfo } from "@zos/device";
 import { px } from "@zos/utils";
-import { push } from "@zos/router";
+import { replace } from "@zos/router";
 
 const logger = Logger.getLogger("pre-training");
 const { width: W } = getDeviceInfo();
@@ -24,6 +24,13 @@ const FONT = {
   TINY: 16,
 };
 
+var pageState = {
+  pageInstance: null,
+  startBtnWidget: null,
+  statusWidget: null,
+  startingTraining: false,
+};
+
 function getTrainingTypeName(type) {
   var names = {
     cardio_continuous: "Cardio",
@@ -40,162 +47,179 @@ function formatPace(secPerKm) {
   return min + ":" + String(sec).padStart(2, "0") + " /km";
 }
 
+function startTraining(training) {
+  if (pageState.startingTraining) return;
+  pageState.startingTraining = true;
+
+  // Navigate immediately — backend session will be created by active-training
+  navigateToTraining(training);
+}
+
+function navigateToTraining(training) {
+  var a = getApp();
+  a.globalData.trainingSession = {
+    backendSessionId: null,
+    status: "running",
+    startTimestamp: Date.now(),
+    elapsedMs: 0,
+    hrReadings: [],
+    currentHR: 0,
+    currentPace: 0,
+    distanceMeters: 0,
+    lastGpsLat: null,
+    lastGpsLng: null,
+    lastGpsTimestamp: 0,
+    percentComplete: 0,
+    eventsTriggered: {},
+    pendingLlmRequest: false,
+    lastCompanionMsg: "",
+    lastCompanionTime: 0,
+    failedSyncCount: 0,
+    bleDisconnected: false,
+  };
+  replace({ url: "page/gt/active-training/index.page" });
+}
+
 Page({
-  onInit() {
-    logger.debug("pre-training onInit");
-  },
+    onInit() {
+      logger.debug("pre-training onInit");
+      pageState.startBtnWidget = null;
+      pageState.statusWidget = null;
+      pageState.startingTraining = false;
+    },
 
-  build() {
-    logger.debug("pre-training build START");
+    build() {
+      logger.debug("pre-training build START");
 
-    var app = getApp();
-    var training = app.globalData.currentTraining;
+      var app = getApp();
+      var training = app.globalData.currentTraining;
 
-    if (!training) {
+      if (!training) {
+        hmUI.createWidget(hmUI.widget.TEXT, {
+          x: px(0),
+          y: px(200),
+          w: W,
+          h: px(40),
+          text: "Error: sin entrenamiento",
+          text_size: px(FONT.BODY),
+          color: COLORS.ERROR_RED,
+          align_h: hmUI.align.CENTER_H,
+        });
+        return;
+      }
+
+      // Training name
       hmUI.createWidget(hmUI.widget.TEXT, {
         x: px(0),
-        y: px(200),
+        y: px(50),
         w: W,
         h: px(40),
-        text: "Error: sin entrenamiento",
-        text_size: px(FONT.BODY),
-        color: COLORS.ERROR_RED,
+        text: training.name,
+        text_size: px(FONT.MEDIUM),
+        color: COLORS.WHITE,
         align_h: hmUI.align.CENTER_H,
       });
-      return;
-    }
 
-    // Training name
-    hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(0),
-      y: px(50),
-      w: W,
-      h: px(40),
-      text: training.name,
-      text_size: px(FONT.MEDIUM),
-      color: COLORS.WHITE,
-      align_h: hmUI.align.CENTER_H,
-    });
+      // Type badge background
+      hmUI.createWidget(hmUI.widget.FILL_RECT, {
+        x: px(170),
+        y: px(100),
+        w: px(140),
+        h: px(32),
+        radius: px(16),
+        color: COLORS.PRIMARY,
+      });
 
-    // Type badge background
-    hmUI.createWidget(hmUI.widget.FILL_RECT, {
-      x: px(170),
-      y: px(100),
-      w: px(140),
-      h: px(32),
-      radius: px(16),
-      color: COLORS.PRIMARY,
-    });
-
-    // Type badge label
-    hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(170),
-      y: px(104),
-      w: px(140),
-      h: px(24),
-      text: getTrainingTypeName(training.type),
-      text_size: px(FONT.TINY),
-      color: COLORS.WHITE,
-      align_h: hmUI.align.CENTER_H,
-    });
-
-    // Detail rows
-    var detailY = px(155);
-
-    if (training.durationMinutes) {
+      // Type badge label
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(40),
-        y: detailY,
-        w: px(400),
-        h: px(30),
-        text: "Duracion: " + String(training.durationMinutes) + " min",
-        text_size: px(FONT.BODY),
-        color: COLORS.TEXT_PRIMARY,
+        x: px(170),
+        y: px(104),
+        w: px(140),
+        h: px(24),
+        text: getTrainingTypeName(training.type),
+        text_size: px(FONT.TINY),
+        color: COLORS.WHITE,
         align_h: hmUI.align.CENTER_H,
       });
-      detailY = detailY + px(40);
-    }
 
-    if (training.distanceMeters) {
-      hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(40),
-        y: detailY,
-        w: px(400),
+      // Detail rows
+      var detailY = px(155);
+
+      if (training.durationMinutes) {
+        hmUI.createWidget(hmUI.widget.TEXT, {
+          x: px(40),
+          y: detailY,
+          w: px(400),
+          h: px(30),
+          text: "Duracion: " + String(training.durationMinutes) + " min",
+          text_size: px(FONT.BODY),
+          color: COLORS.TEXT_PRIMARY,
+          align_h: hmUI.align.CENTER_H,
+        });
+        detailY = detailY + px(40);
+      }
+
+      if (training.distanceMeters) {
+        hmUI.createWidget(hmUI.widget.TEXT, {
+          x: px(40),
+          y: detailY,
+          w: px(400),
+          h: px(30),
+          text:
+            "Distancia: " + (training.distanceMeters / 1000).toFixed(1) + " km",
+          text_size: px(FONT.BODY),
+          color: COLORS.TEXT_PRIMARY,
+          align_h: hmUI.align.CENTER_H,
+        });
+        detailY = detailY + px(40);
+      }
+
+      if (training.paceGoalSecPerKm && training.paceGoalSecPerKm > 0) {
+        hmUI.createWidget(hmUI.widget.TEXT, {
+          x: px(40),
+          y: detailY,
+          w: px(400),
+          h: px(30),
+          text: "Ritmo objetivo: " + formatPace(training.paceGoalSecPerKm),
+          text_size: px(FONT.BODY),
+          color: COLORS.TEXT_PRIMARY,
+          align_h: hmUI.align.CENTER_H,
+        });
+        detailY = detailY + px(40);
+      }
+
+      // Status message (shows loading state during session creation)
+      pageState.statusWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+        x: px(0),
+        y: detailY + px(10),
+        w: W,
         h: px(30),
-        text: "Distancia: " + (training.distanceMeters / 1000).toFixed(1) + " km",
-        text_size: px(FONT.BODY),
-        color: COLORS.TEXT_PRIMARY,
+        text: "Preparado para entrenar!",
+        text_size: px(FONT.SMALL),
+        color: COLORS.WARNING_YELLOW,
         align_h: hmUI.align.CENTER_H,
       });
-      detailY = detailY + px(40);
-    }
 
-    if (training.paceGoalSecPerKm && training.paceGoalSecPerKm > 0) {
-      hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(40),
-        y: detailY,
-        w: px(400),
-        h: px(30),
-        text: "Ritmo objetivo: " + formatPace(training.paceGoalSecPerKm),
-        text_size: px(FONT.BODY),
-        color: COLORS.TEXT_PRIMARY,
-        align_h: hmUI.align.CENTER_H,
+      // COMENZAR button
+      pageState.startBtnWidget = hmUI.createWidget(hmUI.widget.BUTTON, {
+        x: (W - px(300)) / 2,
+        y: px(380),
+        w: px(300),
+        h: px(70),
+        text: "COMENZAR",
+        text_size: px(FONT.MEDIUM),
+        radius: px(35),
+        normal_color: COLORS.PRIMARY,
+        press_color: COLORS.PRIMARY_DARK,
+        click_func: function () {
+          startTraining(training);
+        },
       });
-      detailY = detailY + px(40);
-    }
 
-    // Encouraging message
-    hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(0),
-      y: detailY + px(10),
-      w: W,
-      h: px(30),
-      text: "Preparado para entrenar!",
-      text_size: px(FONT.SMALL),
-      color: COLORS.WARNING_YELLOW,
-      align_h: hmUI.align.CENTER_H,
-    });
+      logger.debug("pre-training build DONE");
+    },
 
-    // COMENZAR button
-    hmUI.createWidget(hmUI.widget.BUTTON, {
-      x: (W - px(300)) / 2,
-      y: px(380),
-      w: px(300),
-      h: px(70),
-      text: "COMENZAR",
-      text_size: px(FONT.MEDIUM),
-      radius: px(35),
-      normal_color: COLORS.PRIMARY,
-      press_color: COLORS.PRIMARY_DARK,
-      click_func: function () {
-        var a = getApp();
-        a.globalData.trainingSession = {
-          status: "running",
-          startTimestamp: Date.now(),
-          elapsedMs: 0,
-          hrReadings: [],
-          currentHR: 0,
-          currentPace: 0,
-          distanceMeters: 0,
-          lastGpsLat: null,
-          lastGpsLng: null,
-          lastGpsTimestamp: 0,
-          percentComplete: 0,
-          eventsTriggered: {},
-          pendingLlmRequest: false,
-          lastCompanionMsg: "",
-          lastCompanionTime: 0,
-          failedSyncCount: 0,
-          bleDisconnected: false,
-        };
-        push({ url: "page/gt/active-training/index.page" });
-      },
-    });
-
-    logger.debug("pre-training build DONE");
-  },
-
-  onDestroy() {
-    logger.debug("pre-training onDestroy");
-  },
+    onDestroy() {
+      logger.debug("pre-training onDestroy");
+    },
 });

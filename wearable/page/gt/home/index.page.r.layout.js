@@ -38,7 +38,7 @@ export const BUTTON_START_STYLE = {
   y: px(245),
   w: px(280),
   h: px(56),
-  text: "Iniciar Entrenamiento",
+  text: "Iniciar Entrenamiento v4",
   text_size: px(21),
   radius: px(28),
   normal_color: 0x4CAF50,

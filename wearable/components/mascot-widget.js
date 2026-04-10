@@ -55,7 +55,7 @@ export function createMascotWidget(options) {
     src: MASCOT_FRAMES[mood][0],
   })
 
-  timerId = createTimer(400, 400, function () {
+  timerId = createTimer(1000, 1000, function () {
     var frames = MASCOT_FRAMES[mood]
     frameIdx = (frameIdx + 1) % frames.length
     if (imgWidget) {

@@ -38,14 +38,17 @@
             "page/gt/training-summary/index.page",
             "page/gt/settings/index.page"
           ]
+        },
+        "app-side": {
+          "path": "app-side/index"
+        },
+        "setting": {
+          "path": "setting/index"
         }
       },
       "platforms": [
         {
           "st": "r"
-        },
-        {
-          "st": "s"
         }
       ],
       "designWidth": 480
