@@ -256,22 +256,6 @@ async function handleSaveResults(params, res) {
   }
 }
 
-/**
- * Test TTS: hit the /api/test-tts endpoint and return audio
- */
-async function handleTestTTS(params, res) {
-  try {
-    console.log("[side] test_tts: requesting...")
-    var result = await apiRequest("/api/test-tts")
-    var audioLen = (result && result.audioBase64) ? result.audioBase64.length : 0
-    console.log("[side] test_tts: got response, audio=" + audioLen + " chars")
-    res(null, { success: true, message: result.message, audioBase64: result.audioBase64 })
-  } catch (error) {
-    console.log("[side] test_tts ERROR: " + error.message)
-    res(null, { success: false, error: error.message })
-  }
-}
-
 AppSideService(
   BaseSideService({
     onInit() {
@@ -330,9 +314,6 @@ AppSideService(
           break
         case "save_results":
           handleSaveResults(params, res)
-          break
-        case "test_tts":
-          handleTestTTS(params, res)
           break
         default:
           res(null, { error: "Unknown method: " + req.method })

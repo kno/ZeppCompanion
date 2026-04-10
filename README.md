@@ -76,8 +76,7 @@ ZeppCompanion/
     │   │   │   ├── trainings/      # CRUD
     │   │   │   ├── sessions/       # Start, complete, list
     │   │   │   ├── companion/      # LLM coaching endpoint
-    │   │   │   ├── stats/          # Aggregate stats
-    │   │   │   └── test-tts/       # TTS test endpoint
+    │   │   │   └── stats/          # Aggregate stats
     │   │   ├── dashboard/          # Training list + stats
     │   │   ├── trainings/          # Create/edit/detail
     │   │   └── history/            # Session history + charts
@@ -290,7 +289,6 @@ The Zeus dev server launches the Zepp OS simulator. Use the simulator to test na
 | POST   | `/api/sessions/[id]/complete` | Complete session             |
 | POST   | `/api/companion/message`    | Get AI coaching message      |
 | GET    | `/api/stats`                | Aggregate user stats         |
-| GET    | `/api/test-tts`              | Test TTS audio generation    |
 
 ## Deployment
 

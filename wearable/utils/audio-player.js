@@ -112,57 +112,6 @@ export function playCompanionAudio(base64Data) {
   }
 }
 
-/**
- * Debug version - returns status string for on-screen display
- */
-export function testAudioDebug(base64Data) {
-  if (!base64Data) return "ERR: no data"
-
-  try {
-    if (!ensureMedia()) return "ERR: no media"
-
-    var audioBuffer = null
-    try {
-      audioBuffer = base64ToArrayBuffer(base64Data)
-    } catch (e) {
-      return "ERR: decode " + e.message
-    }
-
-    try {
-      cleanupTempFile()
-      writeFileSync({ path: TEMP_AUDIO_PATH, data: audioBuffer })
-      tempFileWritten = true
-    } catch (e) {
-      return "ERR: write " + e.message
-    }
-
-    var p = ensurePlayer()
-    if (!p) return "ERR: no player"
-
-    try { p.stop() } catch (e) {}
-
-    try {
-      if (prepareListener) {
-        try { p.removeEventListener(p.event.PREPARE, prepareListener) } catch (e) {}
-      }
-      prepareListener = function (result) {
-        if (result) {
-          p.start()
-        }
-      }
-      p.addEventListener(p.event.PREPARE, prepareListener)
-      p.setSource(p.source.FILE, { file: "data://" + TEMP_AUDIO_PATH })
-      p.prepare()
-    } catch (e) {
-      return "ERR: prep " + e.message
-    }
-
-    return "OK: " + Math.round(audioBuffer.byteLength / 1024) + "KB"
-  } catch (e) {
-    return "ERR: " + e.message
-  }
-}
-
 export function stopAudio() {
   if (!player) return
   try { player.stop() } catch (e) {}
