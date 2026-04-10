@@ -12,6 +12,7 @@ import {
   BUTTON_SETTINGS_STYLE,
 } from "zosLoader:./index.page.[pf].layout.js";
 import { createMascotWidget } from "../../../components/mascot-widget";
+import { playCompanionAudio, destroyPlayer, testAudioDebug } from "../../../utils/audio-player";
 
 const logger = Logger.getLogger("home");
 
@@ -104,6 +105,50 @@ function showHomeUI(page) {
     },
   });
 
+  // Test TTS button
+  var testAudioBtn = hmUI.createWidget(hmUI.widget.BUTTON, {
+    x: (DEVICE_WIDTH - px(240)) / 2,
+    y: px(426),
+    w: px(240),
+    h: px(44),
+    text: "Test Audio",
+    text_size: px(18),
+    radius: px(22),
+    normal_color: 0x5C6BC0,
+    press_color: 0x3949AB,
+    click_func: function () {
+      logger.debug("Test Audio tapped");
+      testAudioBtn.setProperty(hmUI.prop.TEXT, "Generando...");
+      page
+        .request({ method: "test_tts" })
+        .then(function (data) {
+          logger.debug("test_tts response: success=" + (data && data.success) + " audioLen=" + (data && data.audioBase64 ? data.audioBase64.length : 0));
+          if (data && data.success && data.audioBase64) {
+            testAudioBtn.setProperty(hmUI.prop.TEXT, "Got " + Math.round(data.audioBase64.length/1024) + "KB");
+            var debugResult = testAudioDebug(data.audioBase64);
+            setTimeout(function () {
+              testAudioBtn.setProperty(hmUI.prop.TEXT, debugResult);
+              setTimeout(function () {
+                testAudioBtn.setProperty(hmUI.prop.TEXT, "Test Audio");
+              }, 5000);
+            }, 1000);
+          } else {
+            testAudioBtn.setProperty(hmUI.prop.TEXT, "No audio data");
+            setTimeout(function () {
+              testAudioBtn.setProperty(hmUI.prop.TEXT, "Test Audio");
+            }, 3000);
+          }
+        })
+        .catch(function (err) {
+          logger.debug("test_tts error: " + err);
+          testAudioBtn.setProperty(hmUI.prop.TEXT, "Error");
+          setTimeout(function () {
+            testAudioBtn.setProperty(hmUI.prop.TEXT, "Test Audio");
+          }, 2000);
+        });
+    },
+  });
+
   // Background fetch of trainings
   try {
     page.request({ method: "fetch_trainings" }).then(function (result) {
@@ -165,6 +210,7 @@ Page(
 
     onDestroy() {
       logger.debug("home onDestroy");
+      destroyPlayer();
       if (mascot) {
         mascot.destroy();
         mascot = null;

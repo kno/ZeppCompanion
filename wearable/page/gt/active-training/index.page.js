@@ -10,6 +10,7 @@ import { BasePage } from "@zeppos/zml/base-page"
 import { evaluateLocalRules, getFallbackMessage, getFinishMessage, parseHRZones } from "../../../utils/companion-engine"
 import { MASCOT_STATES } from "../../../shared/protocol"
 import { createMascotWidget } from "../../../components/mascot-widget"
+import { playCompanionAudio, destroyPlayer } from "../../../utils/audio-player"
 
 var logger = Logger.getLogger("active-training")
 const { width: W } = getDeviceInfo()
@@ -409,9 +410,16 @@ function evaluateCompanion() {
   var session = state.session
   var training = state.training
 
-  logger.debug("[companion] evaluateCompanion called — backendSessionId=" + (session.backendSessionId || "NONE") + " pending=" + state.companionRequestPending + " backendAvailable=" + state.backendAvailable)
+  logger.debug("[companion] evaluateCompanion — backendSessionId=" + (session.backendSessionId || "NONE") + " pending=" + state.companionRequestPending)
 
-  // First check local rules (HR safety, pace correction, milestones)
+  // Priority 1: Try backend LLM (with TTS audio)
+  if (session.backendSessionId && !state.companionRequestPending) {
+    logger.debug("[companion] requesting LLM from backend...")
+    requestBackendCompanion(session)
+    return
+  }
+
+  // Priority 2: Check local rules (HR safety, pace correction, milestones)
   var trainingConfig = {
     paceGoalSecPerKm: training.paceGoalSecPerKm || 0,
     hrZoneMin: state.hrZones ? state.hrZones.hrZoneMin : 0,
@@ -425,15 +433,8 @@ function evaluateCompanion() {
     return
   }
 
-  // Try to get LLM companion message from backend
-  if (session.backendSessionId && !state.companionRequestPending) {
-    logger.debug("[companion] requesting LLM from backend...")
-    requestBackendCompanion(session)
-    return
-  }
-
-  // Fallback: local motivational message
-  logger.debug("[companion] using local fallback — no backendSessionId or request pending")
+  // Priority 3: Fallback local message
+  logger.debug("[companion] using local fallback")
   showCompanionMessage(getFallbackMessage())
 }
 
@@ -475,6 +476,7 @@ function requestBackendCompanion(session) {
           message: companion.message,
           tone: companion.tone || "motivational",
           mascotState: mascotState,
+          audioBase64: companion.audioBase64 || null,
         })
         state.backendAvailable = true
       } else {
@@ -514,6 +516,11 @@ function showCompanionMessage(result) {
     if (state.mascotComponent) {
       state.mascotComponent.setMood(newMood)
     }
+  }
+
+  // Play audio if available
+  if (result.audioBase64) {
+    playCompanionAudio(result.audioBase64)
   }
 }
 
@@ -643,6 +650,9 @@ function finishTraining() {
 // Cleanup
 // ---------------------------------------------------------------------------
 function cleanup() {
+  // Clean up audio player and any temp files
+  destroyPlayer()
+
   // Restore normal screen-off behavior
   resetDropWristScreenOff()
   resetPalmScreenOff()

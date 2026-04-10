@@ -15,7 +15,7 @@ ZeppCompanion is a multi-component fitness system that combines:
 ```
 ┌──────────────────┐       BLE         ┌───────────────┐      HTTPS      ┌─────────────────┐
 │   Amazfit Watch  │ ◄──────────────►  │ Side Service  │ ◄────────────►  │ Backend (Next)  │
-│   (Zepp OS App)  │   MessageBuilder  │ (Phone/Zepp)  │    fetch()      │ + Prisma + LLM  │
+│   (Zepp OS App)  │   MessageBuilder  │ (Phone/Zepp)  │    fetch()      │ + Prisma+LLM+TTS│
 └──────────────────┘                   └───────────────┘                 └─────────────────┘
                                                                               │
                                                                        ┌──────┴─────────┐
@@ -32,6 +32,7 @@ ZeppCompanion is a multi-component fitness system that combines:
 | Backend       | Next.js 15, TypeScript, Prisma, PostgreSQL/SQLite |
 | Frontend      | React, Tailwind CSS, Recharts, React Hook Form, Zod |
 | LLM           | Flexible — OpenAI, Anthropic, or any OpenAI-compatible API |
+| TTS           | Piper TTS (local, offline) — Spanish voice es_MX-claude-high |
 | Auth          | JWT (access + refresh tokens), bcrypt               |
 | Target Device | Amazfit Balance (480×480 round, API 3.7)           |
 
@@ -61,7 +62,8 @@ ZeppCompanion/
 │   ├── format.js                   # Time/pace/distance formatting + haversine
 │   ├── companion-engine.js         # Local coaching rules + fallback messages
 │   ├── sensor-manager.js           # HR + GPS sensor lifecycle
-│   └── mascot.js                   # Mascot animation state machine
+│   ├── mascot.js                   # Mascot animation state machine
+│   └── audio-player.js         # @zos/media Player wrapper for TTS playback
 ├── assets/amazfit-balance.r/
 │   └── mascot/                     # Sprite frames (idle, talk, celebrate, worried)
 └── backend/
@@ -74,7 +76,8 @@ ZeppCompanion/
     │   │   │   ├── trainings/      # CRUD
     │   │   │   ├── sessions/       # Start, complete, list
     │   │   │   ├── companion/      # LLM coaching endpoint
-    │   │   │   └── stats/          # Aggregate stats
+    │   │   │   ├── stats/          # Aggregate stats
+    │   │   │   └── test-tts/       # TTS test endpoint
     │   │   ├── dashboard/          # Training list + stats
     │   │   ├── trainings/          # Create/edit/detail
     │   │   └── history/            # Session history + charts
@@ -82,6 +85,7 @@ ZeppCompanion/
     │   │   ├── auth.ts             # JWT helpers
     │   │   ├── llm.ts              # Flexible LLM provider
     │   │   ├── prompts.ts          # Coaching prompt templates
+    │   │   ├── tts.ts              # Piper TTS integration (local speech synthesis)
     │   │   └── validation.ts       # Zod schemas
     │   └── components/             # React UI components
     └── .env.example
@@ -98,7 +102,7 @@ The companion engine powers personalized coaching during training with both loca
    - Pace correction (suggest slowdown if too fast)
    - Milestone detection (distance, time, or zone achievements)
 
-2. **LLM Provides Richer Messages** — When backend connectivity is available, the LLM generates personalized, contextual coaching messages based on:
+2. **LLM Provides Richer Messages** — When backend connectivity is available, the LLM generates personalized, contextual coaching messages and generates spoken audio via local Piper TTS based on:
    - Current HR zone and trend
    - Pace vs. goal
    - Training progress
@@ -115,6 +119,36 @@ The companion engine powers personalized coaching during training with both loca
    - **60s** — Frequent check-ins (aggressive)
    - **90s** — Balanced (recommended)
    - **120s** — Minimal interruption
+
+## Text-to-Speech (TTS)
+
+Companion messages can be spoken aloud on the watch using local text-to-speech powered by [Piper TTS](https://github.com/rhasspy/piper).
+
+**How it works:**
+1. Backend generates coaching text via LLM
+2. Piper TTS converts text to MP3 audio locally (no cloud API needed)
+3. Audio is sent as base64 alongside the text response
+4. Side Service passes audio through to the watch via BLE
+5. Watch writes MP3 to temp file and plays via `@zos/media` Player API
+
+**Setup:**
+```bash
+cd backend
+chmod +x scripts/setup-piper.sh
+./scripts/setup-piper.sh
+pip3 install piper-tts
+```
+
+Add to `.env`:
+```
+TTS_ENABLED=true
+PIPER_PATH=/path/to/piper
+PIPER_MODEL_PATH=./piper/es_MX-claude-high.onnx
+```
+
+**Requirements:** Python 3.9+, ffmpeg (for WAV→MP3 conversion)
+
+**Note:** TTS is completely optional. If disabled or unavailable, the app works identically but with text-only messages.
 
 ## Mascot States
 
@@ -222,6 +256,9 @@ The Zeus dev server launches the Zepp OS simulator. Use the simulator to test na
 | `LLM_MODEL`         | No       | Model ID (default: gpt-4o-mini)               |
 | `LLM_BASE_URL`      | No       | Custom base URL for self-hosted LLM endpoints |
 | `NEXT_PUBLIC_APP_URL` | No     | Public app URL (default: http://localhost:3000) |
+| `TTS_ENABLED`       | No       | Enable local TTS audio generation (true/false) |
+| `PIPER_PATH`        | No       | Path to piper-tts binary                      |
+| `PIPER_MODEL_PATH`  | No       | Path to Piper ONNX voice model               |
 
 ## User Flows
 
@@ -253,6 +290,7 @@ The Zeus dev server launches the Zepp OS simulator. Use the simulator to test na
 | POST   | `/api/sessions/[id]/complete` | Complete session             |
 | POST   | `/api/companion/message`    | Get AI coaching message      |
 | GET    | `/api/stats`                | Aggregate user stats         |
+| GET    | `/api/test-tts`              | Test TTS audio generation    |
 
 ## Deployment
 

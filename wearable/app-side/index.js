@@ -218,8 +218,10 @@ async function handleRequestCompanion(params, res) {
       method: "POST",
       body: body,
     })
-    console.log("[side][companion] response=" + JSON.stringify(result))
-    // result = { message, tone, mascot_state }
+    var audioLen = (result && result.audioBase64) ? result.audioBase64.length : 0
+    console.log("[side][companion] response msg=" + (result && result.message || "") + " tone=" + (result && result.tone || "") + " hasAudio=" + !!(result && result.audioBase64))
+    console.log("[side][companion] response audio=" + audioLen + " chars")
+    // result = { message, tone, mascot_state, audioBase64 }
     res(null, { success: true, companion: result })
   } catch (error) {
     console.log("[side][companion] ERROR: " + error.message)
@@ -250,6 +252,22 @@ async function handleSaveResults(params, res) {
     )
     res(null, { success: true, session: result })
   } catch (error) {
+    res(null, { success: false, error: error.message })
+  }
+}
+
+/**
+ * Test TTS: hit the /api/test-tts endpoint and return audio
+ */
+async function handleTestTTS(params, res) {
+  try {
+    console.log("[side] test_tts: requesting...")
+    var result = await apiRequest("/api/test-tts")
+    var audioLen = (result && result.audioBase64) ? result.audioBase64.length : 0
+    console.log("[side] test_tts: got response, audio=" + audioLen + " chars")
+    res(null, { success: true, message: result.message, audioBase64: result.audioBase64 })
+  } catch (error) {
+    console.log("[side] test_tts ERROR: " + error.message)
     res(null, { success: false, error: error.message })
   }
 }
@@ -312,6 +330,9 @@ AppSideService(
           break
         case "save_results":
           handleSaveResults(params, res)
+          break
+        case "test_tts":
+          handleTestTTS(params, res)
           break
         default:
           res(null, { error: "Unknown method: " + req.method })

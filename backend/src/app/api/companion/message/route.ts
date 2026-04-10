@@ -4,6 +4,7 @@ import { authenticateRequest } from '@/lib/auth'
 import { companionRequestSchema } from '@/lib/validation'
 import { generateCompletion } from '@/lib/llm'
 import { buildCompanionSystemPrompt, buildCompanionUserPrompt } from '@/lib/prompts'
+import { generateSpeech } from '@/lib/tts'
 
 // Fallback messages when LLM fails
 const FALLBACK_MESSAGES = [
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     if (!session) {
       console.log('[companion] session not found for id=' + sessionId + ' userId=' + auth.userId)
-      return NextResponse.json({ data: getFallback() })
+      return NextResponse.json({ data: { ...getFallback(), audioBase64: null } })
     }
     console.log('[companion] session found, training=' + session.training.name)
 
@@ -116,9 +117,18 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ data: result })
+    // Generate TTS audio (after LLM to avoid CPU contention)
+    console.log('[companion] generating TTS...')
+    const audioBase64 = await generateSpeech(result.message)
+    if (audioBase64) {
+      console.log('[companion] TTS generated, size=' + audioBase64.length + ' chars')
+    } else {
+      console.log('[companion] TTS skipped or failed')
+    }
+
+    return NextResponse.json({ data: { ...result, audioBase64: audioBase64 ?? null } })
   } catch (error) {
     console.error('Companion message error:', error)
-    return NextResponse.json({ data: getFallback() })
+    return NextResponse.json({ data: { ...getFallback(), audioBase64: null } })
   }
 }

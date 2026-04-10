@@ -16,7 +16,8 @@
     "data:os.device.info",
     "data:user.hd.heart_rate",
     "device:os.local_storage",
-    "device:os.geolocation"
+    "device:os.geolocation",
+    "device:os.media"
   ],
   "runtime": {
     "apiVersion": {
