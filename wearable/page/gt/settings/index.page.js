@@ -97,7 +97,6 @@ Page({
 
     COLORS = getColors()
     applyBackground()
-    gpsWidget = createGpsStatusWidget()
     var app = getApp()
     var prefs = app.globalData.userPreferences || {}
 
@@ -264,6 +263,9 @@ Page({
       align_v: hmUI.align.CENTER_V,
     }).addEventListener(hmUI.event.CLICK_UP, function () { back() })
     backBg.addEventListener(hmUI.event.CLICK_UP, function () { back() })
+
+    // GPS status indicator (created last for highest z-order)
+    gpsWidget = createGpsStatusWidget()
 
     logger.debug("settings build DONE")
   },

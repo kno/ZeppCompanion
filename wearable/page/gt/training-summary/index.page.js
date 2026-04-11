@@ -80,7 +80,6 @@ Page({
 
       COLORS = getColors()
       applyBackground()
-      pageState.gpsWidget = createGpsStatusWidget()
 
       var app = getApp();
       var session = app.globalData.trainingSession;
@@ -250,6 +249,9 @@ Page({
           replace({ url: "page/gt/home/index.page" });
         },
       });
+
+      // GPS status indicator (created last for highest z-order)
+      pageState.gpsWidget = createGpsStatusWidget()
 
       logger.debug("training-summary build DONE");
     },

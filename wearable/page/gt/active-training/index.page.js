@@ -314,16 +314,27 @@ function startSensors() {
     logger.debug("HeartRate sensor not available: " + e.message)
   }
 
-  // Step counter — uses onChange callback (getCurrent() only valid inside callback)
+  // Step counter — requires permission data:user.hd.step in app.json
+  // API: getCurrent() returns daily total, onChange() fires on updates
   try {
     state.stepSensor = new Step()
+    var initialSteps = state.stepSensor.getCurrent()
+    logger.debug("[Step] created, getCurrent()=" + initialSteps)
+
+    // Capture baseline immediately (daily step total at training start)
+    if (initialSteps !== undefined && initialSteps !== null && initialSteps > 0) {
+      state.stepBaseline = initialSteps
+    }
+
+    // Register onChange for real-time updates
     state.stepCallback = function () {
       try {
-        var current = state.stepSensor.getCurrent() || 0
-        // Capture baseline on first callback fire (sensor was idle before training)
+        if (!state.stepSensor) return
+        var current = state.stepSensor.getCurrent()
+        if (current === undefined || current === null) return
         if (state.stepBaseline < 0) {
           state.stepBaseline = current
-          logger.debug("Step sensor baseline captured=" + state.stepBaseline)
+          logger.debug("[Step] baseline captured in onChange=" + current)
         }
         if (!state.paused) {
           state.totalSteps = Math.max(0, current - state.stepBaseline)
@@ -333,16 +344,15 @@ function startSensors() {
           if (state.stepsWidget) {
             state.stepsWidget.setProperty(hmUI.prop.TEXT, state.totalSteps + " pasos")
           }
-          logger.debug("Step onChange: current=" + current + " baseline=" + state.stepBaseline + " delta=" + state.totalSteps)
         }
       } catch (e) {
-        logger.debug("Step onChange error: " + e.message)
+        logger.debug("[Step] onChange error: " + e.message)
       }
     }
     state.stepSensor.onChange(state.stepCallback)
-    logger.debug("Step sensor onChange registered")
+    logger.debug("[Step] onChange registered, baseline=" + state.stepBaseline)
   } catch (e) {
-    logger.debug("Step sensor not available: " + e.message)
+    logger.debug("[Step] sensor FAILED: " + e.message)
   }
 
   // Delay GPS init by 3 seconds to avoid simultaneous hardware startup
@@ -386,9 +396,25 @@ function startTimers() {
         }
       }
 
-      // Step count display — value is updated in stepCallback; just refresh the widget
-      if (state.stepsWidget && state.stepSensor) {
-        state.stepsWidget.setProperty(hmUI.prop.TEXT, state.totalSteps + " pasos")
+      // Step count — poll getCurrent() as fallback if onChange didn't fire
+      if (state.stepSensor) {
+        try {
+          var currentSteps = state.stepSensor.getCurrent()
+          if (currentSteps !== undefined && currentSteps !== null && currentSteps > 0) {
+            if (state.stepBaseline < 0) {
+              state.stepBaseline = currentSteps
+              logger.debug("Step baseline (poll)=" + state.stepBaseline)
+            }
+            var delta = Math.max(0, currentSteps - state.stepBaseline)
+            if (delta > state.totalSteps) {
+              state.totalSteps = delta
+              session.totalSteps = state.totalSteps
+            }
+          }
+        } catch (e) { /* ignore poll errors */ }
+        if (state.stepsWidget) {
+          state.stepsWidget.setProperty(hmUI.prop.TEXT, state.totalSteps + " pasos")
+        }
       }
     } catch (e) {
       logger.debug("UI timer error: " + e.message)
@@ -735,7 +761,9 @@ function cleanup() {
   }
 
   if (state.stepSensor && state.stepCallback) {
-    state.stepSensor.offChange(state.stepCallback)
+    try {
+      state.stepSensor.offChange(state.stepCallback)
+    } catch (e) { /* ignore */ }
     state.stepCallback = null
   }
   state.stepSensor = null

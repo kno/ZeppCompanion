@@ -1,13 +1,16 @@
 import * as hmUI from "@zos/ui"
 import { px } from "@zos/utils"
+import { getDeviceInfo } from "@zos/device"
 import { createTimer, stopTimer } from "@zos/timer"
 
-// Position: bottom-left of 480px round display
-var GPS_X = 38
-var GPS_Y = 400
 var GPS_SIZE = 36
 var ICON_SIZE = 22
 var ICON_OFFSET = (GPS_SIZE - ICON_SIZE) / 2
+
+// Position: left edge, vertically centered on round display
+var deviceInfo = getDeviceInfo()
+var GPS_X = 8
+var GPS_Y = Math.round(deviceInfo.height / 2 - GPS_SIZE / 2)
 
 // Colors
 var COLOR_RED = 0xEF5350
@@ -31,22 +34,37 @@ export function createGpsStatusWidget() {
     color: COLOR_RED,
   })
 
-  // Satellite icon on top
+  // Satellite icon on top (pre-resized to 22x22)
   var iconWidget = hmUI.createWidget(hmUI.widget.IMG, {
     x: px(GPS_X + ICON_OFFSET),
     y: px(GPS_Y + ICON_OFFSET),
     w: px(ICON_SIZE),
     h: px(ICON_SIZE),
     src: 'icon_satellite.png',
-    auto_scale: true,
   })
 
-  // Blink timer
+  // Blink timer — also polls GPS status since app-level timers don't fire in Zepp OS
   var blinkOn = false
   var timerId = createTimer(500, 500, function () {
     try {
-      var gpsFixed = getApp().globalData.gpsFixed === true
-      if (gpsFixed) {
+      var appData = getApp().globalData
+      // Poll GPS status from the sensor (app-level timers can't do this)
+      if (appData.geoSensor) {
+        try {
+          var status = appData.geoSensor.getStatus()
+          var wasFix = appData.gpsFixed
+          appData.gpsFixed = (status === 'A')
+          if (!wasFix) {
+            console.log("[GPS] poll status=" + status + " fixed=" + appData.gpsFixed)
+          }
+        } catch (e) {
+          console.log("[GPS] Poll error: " + e.message)
+        }
+      } else {
+        console.log("[GPS] No geoSensor in globalData")
+      }
+
+      if (appData.gpsFixed === true) {
         circleBg.setProperty(hmUI.prop.COLOR, COLOR_GREEN)
         return
       }

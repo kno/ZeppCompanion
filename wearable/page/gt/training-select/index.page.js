@@ -36,7 +36,6 @@ Page({
   build() {
     var COLORS = getColors()
     applyBackground()
-    gpsWidget = createGpsStatusWidget()
 
     // Header
     hmUI.createWidget(hmUI.widget.TEXT, {
@@ -122,6 +121,9 @@ Page({
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: 0, y: lastCardBottom, w: 1, h: 1, color: COLORS.BG_DARK,
     })
+
+    // GPS status indicator (created last for highest z-order)
+    gpsWidget = createGpsStatusWidget()
   },
 
   onDestroy() {

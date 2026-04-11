@@ -112,7 +112,6 @@ Page({
 
     COLORS = getColors()
     applyBackground()
-    pageState.gpsWidget = createGpsStatusWidget()
 
     var app = getApp();
     var training = app.globalData.currentTraining;
@@ -344,6 +343,9 @@ Page({
         startTraining(training);
       },
     });
+
+    // GPS status indicator (created last for highest z-order)
+    pageState.gpsWidget = createGpsStatusWidget()
 
     logger.debug("pre-training build DONE");
   },

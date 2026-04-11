@@ -157,9 +157,6 @@ Page(
 
       applyBackground()
 
-      // GPS status indicator (created after background, destroyed in onDestroy)
-      gpsWidget = createGpsStatusWidget()
-
       // Loading state: title + mascot
       var titleWidget = hmUI.createWidget(hmUI.widget.TEXT, TITLE_STYLE);
       loadingWidgets.push(titleWidget);
@@ -196,6 +193,9 @@ Page(
         logger.debug("check_auth request error: " + e);
         showConfigUI();
       }
+
+      // GPS status indicator (created last for highest z-order)
+      gpsWidget = createGpsStatusWidget()
 
       logger.debug("home build DONE");
     },

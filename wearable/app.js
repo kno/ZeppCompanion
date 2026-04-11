@@ -1,7 +1,6 @@
 import { BaseApp } from "@zeppos/zml/base-app"
 import { loadPreferences } from "./utils/preferences"
 import { Geolocation } from "@zos/sensor"
-import { createTimer, stopTimer } from "@zos/timer"
 
 App(
   BaseApp({
@@ -16,7 +15,6 @@ App(
       },
       geoSensor: null,
       gpsFixed: false,
-      gpsTimerId: null,
     },
     onCreate(options) {
       console.log("app on create invoke");
@@ -24,36 +22,22 @@ App(
       this.globalData.userPreferences = prefs;
 
       // Start GPS early so it has time to get a fix before training begins
+      // NOTE: timers don't fire at app level in Zepp OS, so status polling
+      // is done by the gps-status-widget on each page instead.
+      console.log("[GPS] Attempting early GPS start...")
       try {
         var geo = new Geolocation()
         geo.start()
         this.globalData.geoSensor = geo
-
-        var self = this
-        var timerId = createTimer(2000, 2000, function () {
-          try {
-            if (self.globalData.geoSensor && self.globalData.geoSensor.getStatus() === 'A') {
-              self.globalData.gpsFixed = true
-            } else {
-              self.globalData.gpsFixed = false
-            }
-          } catch (e) {
-            console.log("GPS poll error: " + e.message)
-          }
-        })
-        this.globalData.gpsTimerId = timerId
+        console.log("[GPS] Geolocation sensor created and started")
       } catch (e) {
-        console.log("Geolocation early start error: " + e.message)
+        console.log("[GPS] Early start FAILED: " + e.message)
+        this.globalData.gpsFixed = false
       }
     },
 
     onDestroy(options) {
       console.log("app on destroy invoke");
-
-      if (this.globalData.gpsTimerId !== null) {
-        stopTimer(this.globalData.gpsTimerId)
-        this.globalData.gpsTimerId = null
-      }
 
       if (this.globalData.geoSensor) {
         try {
