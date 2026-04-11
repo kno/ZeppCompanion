@@ -3,8 +3,11 @@ import { px } from "@zos/utils"
 import { getDeviceInfo } from "@zos/device"
 import { replace } from "@zos/router"
 import { getColors, applyBackground } from "../../../utils/theme"
+import { createGpsStatusWidget } from "../../../components/gps-status-widget"
 
 const { width: W } = getDeviceInfo()
+
+var gpsWidget = null
 
 var FALLBACK_TRAININGS = [
   { id: "1", name: "Carrera suave", type: "cardio_continuous", durationMinutes: 30 },
@@ -33,6 +36,7 @@ Page({
   build() {
     var COLORS = getColors()
     applyBackground()
+    gpsWidget = createGpsStatusWidget()
 
     // Header
     hmUI.createWidget(hmUI.widget.TEXT, {
@@ -118,5 +122,12 @@ Page({
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: 0, y: lastCardBottom, w: 1, h: 1, color: COLORS.BG_DARK,
     })
+  },
+
+  onDestroy() {
+    if (gpsWidget) {
+      gpsWidget.destroy()
+      gpsWidget = null
+    }
   },
 })

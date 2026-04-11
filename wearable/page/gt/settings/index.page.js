@@ -5,6 +5,7 @@ import { getDeviceInfo } from "@zos/device"
 import { back } from "@zos/router"
 import { getColors, applyBackground } from "../../../utils/theme"
 import { savePreferences } from "../../../utils/preferences"
+import { createGpsStatusWidget } from "../../../components/gps-status-widget"
 
 const logger = Logger.getLogger("settings")
 const { width: W } = getDeviceInfo()
@@ -75,6 +76,9 @@ function setActiveFreq(activeBtn, others) {
   }
 }
 
+// GPS status widget reference
+var gpsWidget = null
+
 // Store all pill button references for cleanup
 var darkOnPill = null, darkOffPill = null
 var msgOnPill = null, msgOffPill = null
@@ -92,6 +96,7 @@ Page({
 
     COLORS = getColors()
     applyBackground()
+    gpsWidget = createGpsStatusWidget()
     var app = getApp()
     var prefs = app.globalData.userPreferences || {}
 
@@ -242,6 +247,10 @@ Page({
 
   onDestroy() {
     logger.debug("settings onDestroy")
+    if (gpsWidget) {
+      gpsWidget.destroy()
+      gpsWidget = null
+    }
     darkOnPill = null
     darkOffPill = null
     msgOnPill = null

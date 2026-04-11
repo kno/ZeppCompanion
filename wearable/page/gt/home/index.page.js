@@ -16,11 +16,13 @@ import {
 } from "zosLoader:./index.page.[pf].layout.js";
 import { createMascotWidget } from "../../../components/mascot-widget";
 import { getColors, applyBackground } from "../../../utils/theme";
+import { createGpsStatusWidget } from "../../../components/gps-status-widget";
 
 const logger = Logger.getLogger("home");
 
 var mascot = null;
 var loadingWidgets = [];
+var gpsWidget = null;
 
 function clearLoadingWidgets() {
   for (var i = 0; i < loadingWidgets.length; i++) {
@@ -155,6 +157,9 @@ Page(
 
       applyBackground()
 
+      // GPS status indicator (created after background, destroyed in onDestroy)
+      gpsWidget = createGpsStatusWidget()
+
       // Loading state: title + mascot
       var titleWidget = hmUI.createWidget(hmUI.widget.TEXT, TITLE_STYLE);
       loadingWidgets.push(titleWidget);
@@ -200,6 +205,10 @@ Page(
       if (mascot) {
         mascot.destroy();
         mascot = null;
+      }
+      if (gpsWidget) {
+        gpsWidget.destroy();
+        gpsWidget = null;
       }
       loadingWidgets = [];
     },

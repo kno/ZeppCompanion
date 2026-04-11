@@ -5,6 +5,7 @@ import { px } from "@zos/utils";
 import { replace } from "@zos/router";
 import { createMascotWidget } from "../../../components/mascot-widget";
 import { getColors, applyBackground } from "../../../utils/theme";
+import { createGpsStatusWidget } from "../../../components/gps-status-widget";
 
 const logger = Logger.getLogger("pre-training");
 const { width: W } = getDeviceInfo();
@@ -23,6 +24,7 @@ var pageState = {
   mascot: null,
   startBtnWidget: null,
   startingTraining: false,
+  gpsWidget: null,
 };
 
 function getTypeInfo(type) {
@@ -86,6 +88,7 @@ Page({
     pageState.mascot = null;
     pageState.startBtnWidget = null;
     pageState.startingTraining = false;
+    pageState.gpsWidget = null;
   },
 
   build() {
@@ -93,6 +96,7 @@ Page({
 
     COLORS = getColors()
     applyBackground()
+    pageState.gpsWidget = createGpsStatusWidget()
 
     var app = getApp();
     var training = app.globalData.currentTraining;
@@ -333,6 +337,10 @@ Page({
     if (pageState.mascot) {
       pageState.mascot.destroy();
       pageState.mascot = null;
+    }
+    if (pageState.gpsWidget) {
+      pageState.gpsWidget.destroy();
+      pageState.gpsWidget = null;
     }
   },
 });

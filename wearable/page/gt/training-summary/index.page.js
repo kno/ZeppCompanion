@@ -4,6 +4,7 @@ import { px } from "@zos/utils";
 import { getDeviceInfo } from "@zos/device";
 import { replace } from "@zos/router";
 import { getColors, applyBackground } from "../../../utils/theme";
+import { createGpsStatusWidget } from "../../../components/gps-status-widget";
 
 const logger = Logger.getLogger("training-summary");
 const { width: W } = getDeviceInfo();
@@ -21,6 +22,7 @@ const FONT = {
 var pageState = {
   pageInstance: null,
   savedWidget: null,
+  gpsWidget: null,
 };
 
 function formatTimeLong(ms) {
@@ -54,6 +56,7 @@ Page({
     onInit() {
       logger.debug("training-summary onInit");
       pageState.savedWidget = null;
+      pageState.gpsWidget = null;
     },
 
     build() {
@@ -62,6 +65,7 @@ Page({
 
       COLORS = getColors()
       applyBackground()
+      pageState.gpsWidget = createGpsStatusWidget()
 
       var app = getApp();
       var session = app.globalData.trainingSession;
@@ -237,5 +241,9 @@ Page({
 
     onDestroy() {
       logger.debug("training-summary onDestroy");
+      if (pageState.gpsWidget) {
+        pageState.gpsWidget.destroy();
+        pageState.gpsWidget = null;
+      }
     },
 });

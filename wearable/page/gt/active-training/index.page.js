@@ -12,6 +12,7 @@ import { MASCOT_STATES } from "../../../shared/protocol"
 import { createMascotWidget } from "../../../components/mascot-widget"
 import { playCompanionAudio, destroyPlayer } from "../../../utils/audio-player"
 import { getColors, applyBackground } from "../../../utils/theme"
+import { createGpsStatusWidget } from "../../../components/gps-status-widget"
 
 var logger = Logger.getLogger("active-training")
 const { width: W } = getDeviceInfo()
@@ -148,6 +149,7 @@ var state = {
   hrPollTimerId: null,
   geoSensor: null,
   gpsTimerId: null,
+  gpsStatusWidget: null,
 
   training: null,
   session: null,
@@ -205,8 +207,14 @@ function updateHR() {
 
 function startGPS() {
   try {
-    state.geoSensor = new Geolocation()
-    state.geoSensor.start()
+    // Reuse global GPS sensor if available (started early in app.js)
+    var app = getApp()
+    if (app.globalData.geoSensor) {
+      state.geoSensor = app.globalData.geoSensor
+    } else {
+      state.geoSensor = new Geolocation()
+      state.geoSensor.start()
+    }
 
     state.gpsTimerId = createTimer(3000, 3000, function () {
       try {
@@ -701,8 +709,13 @@ function cleanup() {
   }
 
   if (state.geoSensor) {
-    state.geoSensor.stop()
+    // Don't stop — this is the global sensor managed by app.js
     state.geoSensor = null
+  }
+
+  if (state.gpsStatusWidget) {
+    state.gpsStatusWidget.destroy()
+    state.gpsStatusWidget = null
   }
 
   if (state.uiTimerId !== null) {
@@ -898,6 +911,9 @@ function buildUI(training, session) {
       finishTraining()
     },
   })
+
+  // GPS status indicator (created last for highest z-order)
+  state.gpsStatusWidget = createGpsStatusWidget()
 }
 
 // ---------------------------------------------------------------------------
@@ -931,6 +947,7 @@ Page(
       state.hrPollTimerId = null
       state.geoSensor = null
       state.gpsTimerId = null
+      state.gpsStatusWidget = null
       state.hrReadingsAll = []
       state.maxHR = 0
       state.paused = false
