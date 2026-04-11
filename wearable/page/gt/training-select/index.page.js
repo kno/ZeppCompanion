@@ -2,6 +2,7 @@ import * as hmUI from "@zos/ui"
 import { px } from "@zos/utils"
 import { getDeviceInfo } from "@zos/device"
 import { replace } from "@zos/router"
+import { getColors, applyBackground } from "../../../utils/theme"
 
 const { width: W } = getDeviceInfo()
 
@@ -30,11 +31,14 @@ function getTypeInfo(type) {
 
 Page({
   build() {
+    var COLORS = getColors()
+    applyBackground()
+
     // Header
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0, y: px(20), w: W, h: px(30),
       text: "Elige tu entreno",
-      text_size: px(24), color: 0x4CAF50,
+      text_size: px(24), color: COLORS.PRIMARY,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
     })
@@ -43,7 +47,7 @@ Page({
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: (W - px(120)) / 2, y: px(54),
       w: px(120), h: px(2),
-      radius: px(1), color: 0x333333,
+      radius: px(1), color: COLORS.SEPARATOR,
     })
 
     var cardW = px(380)
@@ -64,7 +68,7 @@ Page({
 
       var cardBg = hmUI.createWidget(hmUI.widget.FILL_RECT, {
         x: cardX, y: cardY, w: cardW, h: cardH,
-        radius: px(16), color: 0x1A1A1A,
+        radius: px(16), color: COLORS.BG_CARD,
       })
 
       cardBg.addEventListener(hmUI.event.CLICK_UP, (function (tr) {
@@ -88,7 +92,7 @@ Page({
         x: cardX + px(22), y: cardY + px(14),
         w: cardW - px(30) - px(60), h: px(26),
         text: t.name, text_size: px(20),
-        color: 0xFFFFFF, align_h: hmUI.align.LEFT,
+        color: COLORS.WHITE, align_h: hmUI.align.LEFT,
       })
 
       // Type label
@@ -104,7 +108,7 @@ Page({
         x: cardX + cardW - px(70), y: cardY + px(30),
         w: px(60), h: px(20),
         text: (t.durationMinutes || "?") + " min",
-        text_size: px(14), color: 0x999999,
+        text_size: px(14), color: COLORS.TEXT_SECONDARY,
         align_h: hmUI.align.RIGHT,
       })
     }
@@ -112,7 +116,7 @@ Page({
     // Bottom padding spacer
     var lastCardBottom = startY + trainings.length * (cardH + gap) + px(40)
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
-      x: 0, y: lastCardBottom, w: 1, h: 1, color: 0x000000,
+      x: 0, y: lastCardBottom, w: 1, h: 1, color: COLORS.BG_DARK,
     })
   },
 })

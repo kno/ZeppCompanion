@@ -3,21 +3,12 @@ import { log as Logger } from "@zos/utils";
 import { px } from "@zos/utils";
 import { getDeviceInfo } from "@zos/device";
 import { replace } from "@zos/router";
+import { getColors, applyBackground } from "../../../utils/theme";
 
 const logger = Logger.getLogger("training-summary");
 const { width: W } = getDeviceInfo();
 
-const COLORS = {
-  WHITE: 0xffffff,
-  TEXT_SECONDARY: 0x999999,
-  ACCENT: 0x58d0ff,
-  HR_RED: 0xfc6950,
-  PACE_BLUE: 0x58d0ff,
-  WARNING_YELLOW: 0xffd54f,
-  BG_CARD: 0x1a1a1a,
-  BG_CARD_HOVER: 0x2a2a2a,
-  PRIMARY: 0x4caf50,
-};
+var COLORS = getColors();
 
 const FONT = {
   TITLE: 32,
@@ -68,6 +59,9 @@ Page({
     build() {
       logger.debug("training-summary build START");
       pageState.pageInstance = this;
+
+      COLORS = getColors()
+      applyBackground()
 
       var app = getApp();
       var session = app.globalData.trainingSession;

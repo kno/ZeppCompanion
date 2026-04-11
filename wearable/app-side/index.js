@@ -247,6 +247,7 @@ async function handleSaveResults(params, res) {
           maxHeartRate: Math.round(params.maxHeartRate || 0),
           avgPaceSecPerKm: Math.round(params.avgPaceSecPerKm || 0),
           caloriesBurned: Math.round(params.caloriesBurned || 0),
+          totalSteps: Math.round(params.totalSteps || 0),
         },
       }
     )

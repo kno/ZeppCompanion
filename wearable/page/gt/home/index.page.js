@@ -3,8 +3,10 @@ import { log as Logger } from "@zos/utils";
 import { getText } from "@zos/i18n";
 import { replace, push } from "@zos/router";
 import { BasePage } from "@zeppos/zml/base-page";
+import { px } from "@zos/utils";
 import {
   DEVICE_WIDTH,
+  ICON_BG_SIZE,
   TITLE_STYLE,
   SUBTITLE_STYLE,
   MASCOT_STYLE,
@@ -13,6 +15,7 @@ import {
   BUTTON_ICON_SETTINGS_STYLE,
 } from "zosLoader:./index.page.[pf].layout.js";
 import { createMascotWidget } from "../../../components/mascot-widget";
+import { getColors, applyBackground } from "../../../utils/theme";
 
 const logger = Logger.getLogger("home");
 
@@ -64,8 +67,8 @@ function showConfigUI() {
     text: "Reintentar",
     text_size: SUBTITLE_STYLE.text_size,
     radius: 24,
-    normal_color: 0x333333,
-    press_color: 0x444444,
+    normal_color: getColors().BG_CARD,
+    press_color: getColors().BG_CARD_HOVER,
     click_func: function () {
       replace({ url: "page/gt/home/index.page" });
     },
@@ -82,6 +85,26 @@ function showHomeUI(page) {
   hmUI.createWidget(hmUI.widget.TEXT, TITLE_STYLE);
   hmUI.createWidget(hmUI.widget.TEXT, SUBTITLE_STYLE);
 
+  // Icon background circles (visible in light mode for white icons)
+  var colors = getColors();
+  var iconPad = px(4);
+  hmUI.createWidget(hmUI.widget.FILL_RECT, {
+    x: BUTTON_ICON_HISTORY_STYLE.x - iconPad,
+    y: BUTTON_ICON_HISTORY_STYLE.y - iconPad,
+    w: ICON_BG_SIZE + iconPad * 2,
+    h: ICON_BG_SIZE + iconPad * 2,
+    radius: (ICON_BG_SIZE + iconPad * 2) / 2,
+    color: colors.ICON_BG,
+  });
+  hmUI.createWidget(hmUI.widget.FILL_RECT, {
+    x: BUTTON_ICON_SETTINGS_STYLE.x - iconPad,
+    y: BUTTON_ICON_SETTINGS_STYLE.y - iconPad,
+    w: ICON_BG_SIZE + iconPad * 2,
+    h: ICON_BG_SIZE + iconPad * 2,
+    radius: (ICON_BG_SIZE + iconPad * 2) / 2,
+    color: colors.ICON_BG,
+  });
+
   hmUI.createWidget(hmUI.widget.BUTTON, {
     ...BUTTON_ICON_HISTORY_STYLE,
     click_func: function () {
@@ -93,7 +116,7 @@ function showHomeUI(page) {
     ...BUTTON_ICON_SETTINGS_STYLE,
     click_func: function () {
       logger.debug("Settings tapped");
-      replace({ url: "page/gt/settings/index.page" });
+      push({ url: "page/gt/settings/index.page" });
     },
   });
 
@@ -129,6 +152,8 @@ Page(
 
     build() {
       logger.debug("home build START");
+
+      applyBackground()
 
       // Loading state: title + mascot
       var titleWidget = hmUI.createWidget(hmUI.widget.TEXT, TITLE_STYLE);

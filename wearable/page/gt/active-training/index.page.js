@@ -4,13 +4,14 @@ import { px } from "@zos/utils"
 import { getDeviceInfo } from "@zos/device"
 import { replace } from "@zos/router"
 import { createTimer, stopTimer } from "@zos/timer"
-import { HeartRate, Geolocation } from "@zos/sensor"
+import { HeartRate, Geolocation, Step } from "@zos/sensor"
 import { pauseDropWristScreenOff, resetDropWristScreenOff, pausePalmScreenOff, resetPalmScreenOff, setPageBrightTime } from "@zos/display"
 import { BasePage } from "@zeppos/zml/base-page"
 import { evaluateLocalRules, getFallbackMessage, getFinishMessage, parseHRZones } from "../../../utils/companion-engine"
 import { MASCOT_STATES } from "../../../shared/protocol"
 import { createMascotWidget } from "../../../components/mascot-widget"
 import { playCompanionAudio, destroyPlayer } from "../../../utils/audio-player"
+import { getColors, applyBackground } from "../../../utils/theme"
 
 var logger = Logger.getLogger("active-training")
 const { width: W } = getDeviceInfo()
@@ -18,23 +19,7 @@ const { width: W } = getDeviceInfo()
 // ---------------------------------------------------------------------------
 // Colors
 // ---------------------------------------------------------------------------
-var COLORS = {
-  PRIMARY: 0x4CAF50,
-  ACCENT: 0x58D0FF,
-  HR_RED: 0xFC6950,
-  PACE_BLUE: 0x58D0FF,
-  PROGRESS_GREEN: 0x5BE7A9,
-  WARNING_YELLOW: 0xFFD54F,
-  ERROR_RED: 0xEF5350,
-  WHITE: 0xFFFFFF,
-  TEXT_SECONDARY: 0x999999,
-  TEXT_DIMMED: 0x666666,
-  BG_DARK: 0x000000,
-  BG_CARD: 0x1A1A1A,
-  BG_CARD_HOVER: 0x2A2A2A,
-  ARC_BG: 0x333333,
-  ARC_FILL: 0x5BE7A9,
-}
+var COLORS = getColors()
 
 var FONT = {
   LARGE: 48,
@@ -76,13 +61,15 @@ var AT = {
   MASCOT_W: px(150),
   MASCOT_H: px(98),
 
+  STEPS_Y: px(278),
+
   MSG_X: px(60),
-  MSG_Y: px(280),
+  MSG_Y: px(322),
   MSG_W: px(360),
-  MSG_H: px(45),
+  MSG_H: px(40),
   MSG_SIZE: px(FONT.TINY),
 
-  BTN_Y: px(335),
+  BTN_Y: px(365),
   BTN_H: px(46),
   BTN_RADIUS: px(23),
   PAUSE_X: px(80),
@@ -150,6 +137,11 @@ var state = {
   mascotComponent: null,
   mascotMood: 'neutro',
   pauseBtnWidget: null,
+
+  stepSensor: null,
+  stepBaseline: 0,
+  totalSteps: 0,
+  stepsWidget: null,
 
   hrSensor: null,
   hrCallback: null,
@@ -298,6 +290,15 @@ function startSensors() {
     logger.debug("HeartRate sensor not available: " + e.message)
   }
 
+  // Step counter
+  try {
+    state.stepSensor = new Step()
+    state.stepBaseline = state.stepSensor.getCurrent() || 0
+    logger.debug("Step sensor started, baseline=" + state.stepBaseline)
+  } catch (e) {
+    logger.debug("Step sensor not available: " + e.message)
+  }
+
   // Delay GPS init by 3 seconds to avoid simultaneous hardware startup
   createTimer(3000, 0, function () {
     startGPS()
@@ -338,6 +339,16 @@ function startTimers() {
           finishTraining()
         }
       }
+
+      // Update step count
+      if (state.stepSensor) {
+        var currentSteps = state.stepSensor.getCurrent() || 0
+        state.totalSteps = Math.max(0, currentSteps - state.stepBaseline)
+        session.totalSteps = state.totalSteps
+        if (state.stepsWidget) {
+          state.stepsWidget.setProperty(hmUI.prop.TEXT, state.totalSteps + " pasos")
+        }
+      }
     } catch (e) {
       logger.debug("UI timer error: " + e.message)
     }
@@ -350,10 +361,9 @@ function startTimers() {
     // Try to create backend session if we don't have one yet
     createBackendSession()
 
-    // Companion evaluation timer — TEMP: 10s for testing (original uses userPreferences.messageFrequency)
-    // var app = getApp()
-    // var freqMs = ((app.globalData.userPreferences && app.globalData.userPreferences.messageFrequency) || 90) * 1000
-    var freqMs = 10000 // TEMP: 10 seconds for testing
+    // Companion evaluation timer
+    var app2 = getApp()
+    var freqMs = ((app2.globalData.userPreferences && app2.globalData.userPreferences.messageFrequency) || 90) * 1000
     logger.debug("[timer] companion timer starting with freqMs=" + freqMs)
     state.companionTimerId = createTimer(freqMs, freqMs, function () {
       try {
@@ -409,6 +419,13 @@ function createBackendSession() {
 function evaluateCompanion() {
   var session = state.session
   var training = state.training
+
+  // Check if companion messages are enabled
+  var prefs = getApp().globalData.userPreferences
+  if (prefs && prefs.enableCompanionMessages === false) {
+    showCompanionMessage(getFallbackMessage())
+    return
+  }
 
   logger.debug("[companion] evaluateCompanion — backendSessionId=" + (session.backendSessionId || "NONE") + " pending=" + state.companionRequestPending)
 
@@ -518,8 +535,9 @@ function showCompanionMessage(result) {
     }
   }
 
-  // Play audio if available
-  if (result.audioBase64) {
+  // Play audio if available and enabled
+  var audioPrefs = getApp().globalData.userPreferences
+  if (result.audioBase64 && (!audioPrefs || audioPrefs.enableAudioMessages !== false)) {
     playCompanionAudio(result.audioBase64)
   }
 }
@@ -627,6 +645,7 @@ function finishTraining() {
           maxHeartRate: state.maxHR,
           avgPaceSecPerKm: session.currentPace || 0,
           caloriesBurned: 0,
+          totalSteps: state.totalSteps || 0,
         },
       })
       .then(function (data) {
@@ -674,6 +693,8 @@ function cleanup() {
     state.hrSensor = null
   }
 
+  state.stepSensor = null
+
   if (state.gpsTimerId !== null) {
     stopTimer(state.gpsTimerId)
     state.gpsTimerId = null
@@ -704,6 +725,9 @@ function cleanup() {
 // UI construction
 // ---------------------------------------------------------------------------
 function buildUI(training, session) {
+  COLORS = getColors()
+  applyBackground()
+
   // Progress arc background
   hmUI.createWidget(hmUI.widget.ARC, {
     x: AT.ARC_X,
@@ -798,6 +822,29 @@ function buildUI(training, session) {
     align_h: hmUI.align.CENTER_H,
   })
 
+  // Steps
+  state.stepsWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    x: 0,
+    y: AT.STEPS_Y,
+    w: W,
+    h: AT.STAT_H,
+    text: '0 pasos',
+    text_size: AT.STAT_SIZE,
+    color: COLORS.WARNING_YELLOW,
+    align_h: hmUI.align.CENTER_H,
+  })
+
+  hmUI.createWidget(hmUI.widget.TEXT, {
+    x: 0,
+    y: AT.STEPS_Y + AT.STAT_H,
+    w: W,
+    h: px(18),
+    text: 'Pasos',
+    text_size: AT.LABEL_SIZE,
+    color: COLORS.TEXT_DIMMED,
+    align_h: hmUI.align.CENTER_H,
+  })
+
   // Mascot
   state.mascotComponent = createMascotWidget({
     x: AT.MASCOT_X,
@@ -875,6 +922,10 @@ Page(
       state.mascotComponent = null
       state.mascotMood = 'neutro'
       state.pauseBtnWidget = null
+      state.stepSensor = null
+      state.stepBaseline = 0
+      state.totalSteps = 0
+      state.stepsWidget = null
       state.hrSensor = null
       state.hrCallback = null
       state.hrPollTimerId = null

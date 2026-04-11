@@ -1,6 +1,7 @@
 import * as hmUI from "@zos/ui";
 import { getDeviceInfo } from "@zos/device";
 import { px } from "@zos/utils";
+import { getColors } from "../../../utils/theme";
 
 export const { width: DEVICE_WIDTH, height: DEVICE_HEIGHT } = getDeviceInfo();
 
@@ -10,7 +11,7 @@ export const TITLE_STYLE = {
   y: px(50),
   w: DEVICE_WIDTH,
   h: px(40),
-  color: 0xffffff,
+  color: getColors().WHITE,
   text_size: px(30),
   align_h: hmUI.align.CENTER_H,
 };
@@ -21,7 +22,7 @@ export const SUBTITLE_STYLE = {
   y: px(95),
   w: DEVICE_WIDTH,
   h: px(25),
-  color: 0x999999,
+  color: getColors().TEXT_SECONDARY,
   text_size: px(16),
   align_h: hmUI.align.CENTER_H,
 };
@@ -40,9 +41,11 @@ export const BUTTON_START_STYLE = {
   h: px(82),
   text_size: px(32),
   radius: px(36),
-  normal_color: 0x4CAF50,
-  press_color: 0x388E3C,
+  normal_color: getColors().PRIMARY,
+  press_color: getColors().PRIMARY_DARK,
 };
+
+export const ICON_BG_SIZE = px(48);
 
 export const BUTTON_ICON_HISTORY_STYLE = {
   x: px(97),

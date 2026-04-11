@@ -39,8 +39,11 @@ var MASCOT_FRAMES = {
 }
 
 export function createMascotWidget(options) {
-  var x = options.x
-  var y = options.y
+  const position = {
+    x: options.x,
+    y: options.y,
+  };
+
   var w = options.w
   var h = options.h
   var mood = options.initialMood || 'neutro'
@@ -48,8 +51,8 @@ export function createMascotWidget(options) {
   var timerId = null
 
   var imgWidget = hmUI.createWidget(hmUI.widget.IMG, {
-    x: x,
-    y: y,
+    x: position.x,
+    y: position.y,
     w: w,
     h: h,
     src: MASCOT_FRAMES[mood][0],
@@ -81,5 +84,12 @@ export function createMascotWidget(options) {
     getWidget: function () {
       return imgWidget
     },
+    getPosition: function () {
+      return position
+    },
+    setPosition: function ({x, y}) {
+      position.x = x;
+      position.y = y;
+    }
   }
 }

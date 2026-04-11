@@ -13,6 +13,7 @@ interface Session {
   totalDistanceM: number | null
   avgHeartRate: number | null
   avgPaceSecPerKm: number | null
+  totalSteps: number | null
   training: { name: string; type: string }
 }
 
@@ -82,6 +83,9 @@ export default function HistoryPage() {
                     )}
                     {s.avgHeartRate && (
                       <span>{s.avgHeartRate} bpm</span>
+                    )}
+                    {s.totalSteps && (
+                      <span>{s.totalSteps.toLocaleString()} pasos</span>
                     )}
                   </div>
                 </div>

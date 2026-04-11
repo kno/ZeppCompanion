@@ -52,6 +52,7 @@ model TrainingSession {
   maxHeartRate     Int?
   avgPaceSecPerKm  Int?
   caloriesBurned   Int?
+  totalSteps       Int?
 
   dataPoints SessionDataPoint[]
   messages   CompanionMessage[]

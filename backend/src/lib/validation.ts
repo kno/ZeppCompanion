@@ -46,6 +46,7 @@ export const sessionCompleteSchema = z.object({
   maxHeartRate: z.number().int().nonnegative().optional(),
   avgPaceSecPerKm: z.number().int().nonnegative().optional(),
   caloriesBurned: z.number().int().nonnegative().optional(),
+  totalSteps: z.number().int().nonnegative().optional(),
 })
 
 // Companion schemas

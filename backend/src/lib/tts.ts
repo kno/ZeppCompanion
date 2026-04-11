@@ -28,11 +28,16 @@ export async function generateSpeech(text: string): Promise<string | null> {
     }, 8000)
 
     // Piper (Python): read from stdin, output raw PCM to stdout
-    const piper = spawn(PIPER_PATH, [
+    const speaker = process.env.PIPER_SPEAKER || ''
+    const piperArgs = [
       '--model', modelPath,
       '--data-dir', modelPath.replace(/\/[^/]+$/, ''),
       '--output-raw',
-    ])
+    ]
+    if (speaker) {
+      piperArgs.push('--speaker', speaker)
+    }
+    const piper = spawn(PIPER_PATH, piperArgs)
 
     // FFmpeg: convert raw PCM s16le 22050Hz mono → MP3 32kbps
     const ffmpeg = spawn('ffmpeg', [

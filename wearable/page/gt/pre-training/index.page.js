@@ -4,22 +4,12 @@ import { getDeviceInfo } from "@zos/device";
 import { px } from "@zos/utils";
 import { replace } from "@zos/router";
 import { createMascotWidget } from "../../../components/mascot-widget";
+import { getColors, applyBackground } from "../../../utils/theme";
 
 const logger = Logger.getLogger("pre-training");
 const { width: W } = getDeviceInfo();
 
-const COLORS = {
-  WHITE: 0xffffff,
-  TEXT_PRIMARY: 0xffffff,
-  TEXT_SECONDARY: 0x999999,
-  PRIMARY: 0x4caf50,
-  PRIMARY_DARK: 0x388e3c,
-  ERROR_RED: 0xef5350,
-  WARNING_YELLOW: 0xffd54f,
-  CARD_BG: 0x1a1a1a,
-  SEPARATOR: 0x333333,
-  READY_GREEN: 0x69f0ae,
-};
+var COLORS = getColors();
 
 const FONT = {
   LARGE: 34,
@@ -100,6 +90,9 @@ Page({
 
   build() {
     logger.debug("pre-training build START");
+
+    COLORS = getColors()
+    applyBackground()
 
     var app = getApp();
     var training = app.globalData.currentTraining;
@@ -199,7 +192,7 @@ Page({
       w: cardW,
       h: cardH,
       radius: px(14),
-      color: COLORS.CARD_BG,
+      color: COLORS.BG_CARD,
     });
 
     // Colored left accent bar
