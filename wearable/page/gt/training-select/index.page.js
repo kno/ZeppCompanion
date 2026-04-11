@@ -11,21 +11,41 @@ var FALLBACK_TRAININGS = [
   { id: "3", name: "Trote libre", type: "free", durationMinutes: 45 },
 ]
 
+function getTypeInfo(type) {
+  switch (type) {
+    case "cardio_continuous":
+      return { label: "Cardio", color: 0x4CAF50 }
+    case "intervals":
+      return { label: "Intervalos", color: 0xFF9800 }
+    case "free":
+      return { label: "Libre", color: 0x58D0FF }
+    case "strength":
+      return { label: "Fuerza", color: 0xE040FB }
+    case "recovery":
+      return { label: "Recuperacion", color: 0x5BE7A9 }
+    default:
+      return { label: "Entreno", color: 0x888888 }
+  }
+}
+
 Page({
   build() {
     // Header
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 0,
-      y: px(20),
-      w: W,
-      h: px(30),
+      x: 0, y: px(20), w: W, h: px(30),
       text: "Elige tu entreno",
-      text_size: px(24),
-      color: 0x4CAF50,
+      text_size: px(24), color: 0x4CAF50,
       align_h: hmUI.align.CENTER_H,
+      align_v: hmUI.align.CENTER_V,
     })
 
-    // Render cards
+    // Separator
+    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+      x: (W - px(120)) / 2, y: px(54),
+      w: px(120), h: px(2),
+      radius: px(1), color: 0x333333,
+    })
+
     var cardW = px(380)
     var cardH = px(76)
     var gap = px(8)
@@ -40,14 +60,11 @@ Page({
     for (var i = 0; i < trainings.length; i++) {
       var t = trainings[i]
       var cardY = startY + i * (cardH + gap)
+      var typeInfo = getTypeInfo(t.type)
 
       var cardBg = hmUI.createWidget(hmUI.widget.FILL_RECT, {
-        x: cardX,
-        y: cardY,
-        w: cardW,
-        h: cardH,
-        radius: px(16),
-        color: 0x1A1A1A,
+        x: cardX, y: cardY, w: cardW, h: cardH,
+        radius: px(16), color: 0x1A1A1A,
       })
 
       cardBg.addEventListener(hmUI.event.CLICK_UP, (function (tr) {
@@ -58,27 +75,44 @@ Page({
         }
       })(t))
 
-      hmUI.createWidget(hmUI.widget.TEXT, {
-        x: cardX + px(22),
-        y: cardY + px(14),
-        w: cardW - px(90),
-        h: px(26),
-        text: t.name,
-        text_size: px(20),
-        color: 0xFFFFFF,
-        align_h: hmUI.align.LEFT,
+      // Colored accent bar
+      var accentPad = px(8)
+      hmUI.createWidget(hmUI.widget.FILL_RECT, {
+        x: cardX + px(8), y: cardY + accentPad,
+        w: px(4), h: cardH - accentPad * 2,
+        radius: px(2), color: typeInfo.color,
       })
 
+      // Training name
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: cardX + px(22),
-        y: cardY + px(44),
-        w: px(120),
-        h: px(20),
-        text: t.durationMinutes + " min",
-        text_size: px(14),
-        color: 0x999999,
-        align_h: hmUI.align.LEFT,
+        x: cardX + px(22), y: cardY + px(14),
+        w: cardW - px(30) - px(60), h: px(26),
+        text: t.name, text_size: px(20),
+        color: 0xFFFFFF, align_h: hmUI.align.LEFT,
+      })
+
+      // Type label
+      hmUI.createWidget(hmUI.widget.TEXT, {
+        x: cardX + px(22), y: cardY + px(44),
+        w: px(120), h: px(20),
+        text: typeInfo.label, text_size: px(14),
+        color: typeInfo.color, align_h: hmUI.align.LEFT,
+      })
+
+      // Duration (right-aligned)
+      hmUI.createWidget(hmUI.widget.TEXT, {
+        x: cardX + cardW - px(70), y: cardY + px(30),
+        w: px(60), h: px(20),
+        text: (t.durationMinutes || "?") + " min",
+        text_size: px(14), color: 0x999999,
+        align_h: hmUI.align.RIGHT,
       })
     }
+
+    // Bottom padding spacer
+    var lastCardBottom = startY + trainings.length * (cardH + gap) + px(40)
+    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+      x: 0, y: lastCardBottom, w: 1, h: 1, color: 0x000000,
+    })
   },
 })
