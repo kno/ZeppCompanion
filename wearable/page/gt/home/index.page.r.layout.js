@@ -28,43 +28,36 @@ export const SUBTITLE_STYLE = {
 
 export const MASCOT_STYLE = {
   x: (DEVICE_WIDTH - px(150)) / 2,
-  y: px(130),
+  y: px(180),
   w: px(150),
   h: px(98),
 };
 
 export const BUTTON_START_STYLE = {
-  x: (DEVICE_WIDTH - px(280)) / 2,
-  y: px(245),
-  w: px(280),
-  h: px(56),
-  text: "Iniciar Entrenamiento v4",
-  text_size: px(21),
-  radius: px(28),
+  x: (DEVICE_WIDTH - px(350)) / 2,
+  y: px(310),
+  w: px(350),
+  h: px(82),
+  text_size: px(32),
+  radius: px(36),
   normal_color: 0x4CAF50,
   press_color: 0x388E3C,
 };
 
-export const BUTTON_HISTORY_STYLE = {
-  x: (DEVICE_WIDTH - px(240)) / 2,
-  y: px(314),
-  w: px(240),
-  h: px(44),
-  text: "Historial",
-  text_size: px(18),
-  radius: px(22),
-  normal_color: 0x1A1A1A,
-  press_color: 0x2A2A2A,
+export const BUTTON_ICON_HISTORY_STYLE = {
+  x: px(97),
+  y: px(205),
+  w: -1,
+  h: -1,
+  normal_src: "icon_history.png",
+  press_src: "icon_history_press.png",
 };
 
-export const BUTTON_SETTINGS_STYLE = {
-  x: (DEVICE_WIDTH - px(240)) / 2,
-  y: px(370),
-  w: px(240),
-  h: px(44),
-  text: "Configuracion",
-  text_size: px(18),
-  radius: px(22),
-  normal_color: 0x1A1A1A,
-  press_color: 0x2A2A2A,
+export const BUTTON_ICON_SETTINGS_STYLE = {
+  x: px(335),
+  y: px(205),
+  w: -1,
+  h: -1,
+  normal_src: "icon_settings.png",
+  press_src: "icon_settings_press.png",
 };

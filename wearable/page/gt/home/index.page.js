@@ -1,5 +1,6 @@
 import * as hmUI from "@zos/ui";
 import { log as Logger } from "@zos/utils";
+import { getText } from "@zos/i18n";
 import { replace, push } from "@zos/router";
 import { BasePage } from "@zeppos/zml/base-page";
 import {
@@ -8,8 +9,8 @@ import {
   SUBTITLE_STYLE,
   MASCOT_STYLE,
   BUTTON_START_STYLE,
-  BUTTON_HISTORY_STYLE,
-  BUTTON_SETTINGS_STYLE,
+  BUTTON_ICON_HISTORY_STYLE,
+  BUTTON_ICON_SETTINGS_STYLE,
 } from "zosLoader:./index.page.[pf].layout.js";
 import { createMascotWidget } from "../../../components/mascot-widget";
 
@@ -45,7 +46,7 @@ function showConfigUI() {
 
   hmUI.createWidget(hmUI.widget.TEXT, {
     x: DEVICE_WIDTH * 0.1,
-    y: MASCOT_STYLE.y + MASCOT_STYLE.h + 12,
+    y: mascot.getPosition().y + MASCOT_STYLE.h + 12,
     w: DEVICE_WIDTH * 0.8,
     h: 60,
     text: "Configura tu cuenta en la app Zepp del telefono",
@@ -57,7 +58,7 @@ function showConfigUI() {
 
   hmUI.createWidget(hmUI.widget.BUTTON, {
     x: (DEVICE_WIDTH - 240) / 2,
-    y: MASCOT_STYLE.y + MASCOT_STYLE.h + 82,
+    y: mascot.getPosition().y + MASCOT_STYLE.h + 82,
     w: 240,
     h: 48,
     text: "Reintentar",
@@ -82,25 +83,26 @@ function showHomeUI(page) {
   hmUI.createWidget(hmUI.widget.TEXT, SUBTITLE_STYLE);
 
   hmUI.createWidget(hmUI.widget.BUTTON, {
-    ...BUTTON_START_STYLE,
-    click_func: function () {
-      logger.debug("Start tapped");
-      push({ url: "page/gt/training-select/index.page" });
-    },
-  });
-
-  hmUI.createWidget(hmUI.widget.BUTTON, {
-    ...BUTTON_HISTORY_STYLE,
+    ...BUTTON_ICON_HISTORY_STYLE,
     click_func: function () {
       logger.debug("History tapped");
     },
   });
 
   hmUI.createWidget(hmUI.widget.BUTTON, {
-    ...BUTTON_SETTINGS_STYLE,
+    ...BUTTON_ICON_SETTINGS_STYLE,
     click_func: function () {
       logger.debug("Settings tapped");
       replace({ url: "page/gt/settings/index.page" });
+    },
+  });
+
+  hmUI.createWidget(hmUI.widget.BUTTON, {
+    ...BUTTON_START_STYLE,
+    text: getText("start_training"),
+    click_func: function () {
+      logger.debug("Start tapped");
+      push({ url: "page/gt/training-select/index.page" });
     },
   });
 
@@ -134,7 +136,7 @@ Page(
 
       mascot = createMascotWidget({
         x: MASCOT_STYLE.x,
-        y: MASCOT_STYLE.y,
+        y: MASCOT_STYLE.y - 30,
         w: MASCOT_STYLE.w,
         h: MASCOT_STYLE.h,
         initialMood: "neutro",
@@ -146,6 +148,11 @@ Page(
         this.request({ method: "check_auth" })
           .then(function (result) {
             if (result && result.success && result.authenticated) {
+              mascot.setPosition({
+                x: MASCOT_STYLE.x,
+                y: MASCOT_STYLE.y,
+              })
+
               showHomeUI(self);
             } else {
               showConfigUI();
