@@ -46,6 +46,21 @@ function formatPace(secPerKm) {
   return min + ":" + String(sec).padStart(2, "0") + " /km";
 }
 
+function formatSpeed(secPerKm) {
+  var prefs = getApp().globalData.userPreferences;
+  if (prefs && prefs.speedUnit === 'km_h') {
+    if (!secPerKm || secPerKm <= 0 || secPerKm > 3600) return '-- km/h';
+    var kmh = 3600 / secPerKm;
+    return kmh.toFixed(1) + ' km/h';
+  }
+  return formatPace(secPerKm);
+}
+
+function getSpeedLabel() {
+  var prefs = getApp().globalData.userPreferences;
+  return (prefs && prefs.speedUnit === 'km_h') ? 'Velocidad media' : 'Ritmo medio';
+}
+
 function formatDistance(meters) {
   if (!meters || meters < 0) return "0 m";
   if (meters < 1000) return Math.round(meters) + " m";
@@ -181,13 +196,13 @@ Page({
         align_h: hmUI.align.CENTER_H,
       });
 
-      // Avg Pace
+      // Avg Pace / Speed
       hmUI.createWidget(hmUI.widget.TEXT, {
         x: px(0),
         y: px(280),
         w: W,
         h: px(30),
-        text: formatPace(session ? session.currentPace : 0),
+        text: formatSpeed(session ? session.currentPace : 0),
         text_size: px(FONT.BODY),
         color: COLORS.PACE_BLUE,
         align_h: hmUI.align.CENTER_H,
@@ -198,7 +213,7 @@ Page({
         y: px(310),
         w: W,
         h: px(20),
-        text: "Ritmo medio",
+        text: getSpeedLabel(),
         text_size: px(FONT.TINY),
         color: COLORS.TEXT_SECONDARY,
         align_h: hmUI.align.CENTER_H,

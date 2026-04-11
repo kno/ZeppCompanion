@@ -83,6 +83,7 @@ var gpsWidget = null
 var darkOnPill = null, darkOffPill = null
 var msgOnPill = null, msgOffPill = null
 var audioOnPill = null, audioOffPill = null
+var speedMinKmPill = null, speedKmHPill = null
 var freqHighPill = null, freqMedPill = null, freqLowPill = null
 var freqLabelWidget = null
 
@@ -177,16 +178,38 @@ Page({
       setActive(audioOffPill, audioOnPill)
     })
 
-    // ── Section: Frecuencia ───────────────────────────────────────────────
+    // ── Section: Velocidad ────────────────────────────────────────────────
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: px(40), y: px(420), w: px(400), h: px(24),
+      text: "Velocidad",
+      text_size: px(FONT.SMALL),
+      color: COLORS.TEXT_SECONDARY,
+    })
+
+    var currentSpeed = prefs.speedUnit || 'min_km'
+    speedMinKmPill = createPillButton(110, 455, 140, 45, "min/km", currentSpeed === 'min_km', function () {
+      var a = getApp()
+      a.globalData.userPreferences.speedUnit = 'min_km'
+      savePreferences(a.globalData.userPreferences)
+      setActive(speedMinKmPill, speedKmHPill)
+    })
+    speedKmHPill = createPillButton(260, 455, 140, 45, "km/h", currentSpeed === 'km_h', function () {
+      var a = getApp()
+      a.globalData.userPreferences.speedUnit = 'km_h'
+      savePreferences(a.globalData.userPreferences)
+      setActive(speedKmHPill, speedMinKmPill)
+    })
+
+    // ── Section: Frecuencia ───────────────────────────────────────────────
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: px(40), y: px(520), w: px(400), h: px(24),
       text: "Frecuencia de mensajes",
       text_size: px(FONT.SMALL),
       color: COLORS.TEXT_SECONDARY,
     })
 
     freqLabelWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(0), y: px(452), w: W, h: px(30),
+      x: px(0), y: px(552), w: W, h: px(30),
       text: getFrequencyLabel(prefs.messageFrequency || 90),
       text_size: px(FONT.BODY),
       color: COLORS.ACCENT,
@@ -195,21 +218,21 @@ Page({
 
     var currentFreq = prefs.messageFrequency || 90
 
-    freqHighPill = createPillButton(50, 492, 110, 45, "Alta", currentFreq <= 60, function () {
+    freqHighPill = createPillButton(50, 592, 110, 45, "Alta", currentFreq <= 60, function () {
       var a = getApp()
       a.globalData.userPreferences.messageFrequency = MESSAGE_FREQUENCY.HIGH
       savePreferences(a.globalData.userPreferences)
       freqLabelWidget.setProperty(hmUI.prop.TEXT, getFrequencyLabel(MESSAGE_FREQUENCY.HIGH))
       setActiveFreq(freqHighPill, [freqMedPill, freqLowPill])
     })
-    freqMedPill = createPillButton(185, 492, 110, 45, "Media", currentFreq > 60 && currentFreq <= 90, function () {
+    freqMedPill = createPillButton(185, 592, 110, 45, "Media", currentFreq > 60 && currentFreq <= 90, function () {
       var a = getApp()
       a.globalData.userPreferences.messageFrequency = MESSAGE_FREQUENCY.MEDIUM
       savePreferences(a.globalData.userPreferences)
       freqLabelWidget.setProperty(hmUI.prop.TEXT, getFrequencyLabel(MESSAGE_FREQUENCY.MEDIUM))
       setActiveFreq(freqMedPill, [freqHighPill, freqLowPill])
     })
-    freqLowPill = createPillButton(320, 492, 110, 45, "Baja", currentFreq > 90, function () {
+    freqLowPill = createPillButton(320, 592, 110, 45, "Baja", currentFreq > 90, function () {
       var a = getApp()
       a.globalData.userPreferences.messageFrequency = MESSAGE_FREQUENCY.LOW
       savePreferences(a.globalData.userPreferences)
@@ -219,7 +242,7 @@ Page({
 
     // ── Version ───────────────────────────────────────────────────────────
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(0), y: px(560), w: W, h: px(24),
+      x: px(0), y: px(660), w: W, h: px(24),
       text: "ZeppCompanion v1.0.0",
       text_size: px(FONT.TINY),
       color: COLORS.TEXT_DIMMED,
@@ -228,12 +251,12 @@ Page({
 
     // ── Back button ───────────────────────────────────────────────────────
     var backBg = hmUI.createWidget(hmUI.widget.FILL_RECT, {
-      x: px(90), y: px(595), w: px(300), h: px(50),
+      x: px(90), y: px(695), w: px(300), h: px(50),
       radius: px(30),
       color: COLORS.BG_CARD,
     })
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(90), y: px(595), w: px(300), h: px(50),
+      x: px(90), y: px(695), w: px(300), h: px(50),
       text: "Volver",
       text_size: px(FONT.BODY),
       color: COLORS.WHITE,
@@ -257,6 +280,8 @@ Page({
     msgOffPill = null
     audioOnPill = null
     audioOffPill = null
+    speedMinKmPill = null
+    speedKmHPill = null
     freqHighPill = null
     freqMedPill = null
     freqLowPill = null

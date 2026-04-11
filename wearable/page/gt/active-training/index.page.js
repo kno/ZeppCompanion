@@ -96,6 +96,21 @@ function formatPace(secPerKm) {
   return min + ':' + String(sec).padStart(2, '0') + ' /km'
 }
 
+function formatSpeed(secPerKm) {
+  var prefs = getApp().globalData.userPreferences
+  if (prefs && prefs.speedUnit === 'km_h') {
+    if (!secPerKm || secPerKm <= 0 || secPerKm > 3600) return '-- km/h'
+    var kmh = 3600 / secPerKm
+    return kmh.toFixed(1) + ' km/h'
+  }
+  return formatPace(secPerKm)
+}
+
+function getSpeedLabel() {
+  var prefs = getApp().globalData.userPreferences
+  return (prefs && prefs.speedUnit === 'km_h') ? 'Velocidad' : 'Ritmo'
+}
+
 function formatHR(bpm) {
   if (!bpm || bpm <= 0) return '-- bpm'
   return bpm + ' bpm'
@@ -257,7 +272,7 @@ function startGPS() {
         if (pace > 0) {
           session.currentPace = pace
           if (state.paceWidget) {
-            state.paceWidget.setProperty(hmUI.prop.TEXT, formatPace(pace))
+            state.paceWidget.setProperty(hmUI.prop.TEXT, formatSpeed(pace))
           }
         }
 
@@ -817,7 +832,7 @@ function buildUI(training, session) {
     y: AT.PACE_Y,
     w: AT.PACE_W,
     h: AT.STAT_H,
-    text: '--:-- /km',
+    text: formatSpeed(0),
     text_size: AT.STAT_SIZE,
     color: COLORS.PACE_BLUE,
     align_h: hmUI.align.CENTER_H,
@@ -828,7 +843,7 @@ function buildUI(training, session) {
     y: AT.PACE_Y + AT.STAT_H,
     w: AT.PACE_W,
     h: px(18),
-    text: 'Ritmo',
+    text: getSpeedLabel(),
     text_size: AT.LABEL_SIZE,
     color: COLORS.TEXT_DIMMED,
     align_h: hmUI.align.CENTER_H,

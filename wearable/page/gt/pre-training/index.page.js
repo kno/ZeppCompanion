@@ -51,6 +51,21 @@ function formatPace(secPerKm) {
   return min + ":" + String(sec).padStart(2, "0") + " /km";
 }
 
+function formatSpeed(secPerKm) {
+  var prefs = getApp().globalData.userPreferences;
+  if (prefs && prefs.speedUnit === 'km_h') {
+    if (!secPerKm || secPerKm <= 0 || secPerKm > 3600) return '-- km/h';
+    var kmh = 3600 / secPerKm;
+    return kmh.toFixed(1) + ' km/h';
+  }
+  return formatPace(secPerKm);
+}
+
+function getSpeedGoalLabel() {
+  var prefs = getApp().globalData.userPreferences;
+  return (prefs && prefs.speedUnit === 'km_h') ? 'Velocidad objetivo' : 'Ritmo objetivo';
+}
+
 function startTraining(training) {
   if (pageState.startingTraining) return;
   pageState.startingTraining = true;
@@ -272,7 +287,7 @@ Page({
         y: rowY,
         w: px(120),
         h: rowH,
-        text: "Ritmo objetivo",
+        text: getSpeedGoalLabel(),
         text_size: px(FONT.TINY),
         color: COLORS.TEXT_SECONDARY,
         align_h: hmUI.align.LEFT,
@@ -283,7 +298,7 @@ Page({
         y: rowY,
         w: innerW,
         h: rowH,
-        text: formatPace(training.paceGoalSecPerKm),
+        text: formatSpeed(training.paceGoalSecPerKm),
         text_size: px(FONT.SMALL),
         color: COLORS.WHITE,
         align_h: hmUI.align.RIGHT,
