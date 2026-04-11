@@ -72,6 +72,7 @@ function navigateToTraining(training) {
     lastGpsLng: null,
     lastGpsTimestamp: 0,
     percentComplete: 0,
+    totalSteps: 0,
     eventsTriggered: {},
     pendingLlmRequest: false,
     lastCompanionMsg: "",

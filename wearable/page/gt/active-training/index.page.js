@@ -140,7 +140,8 @@ var state = {
   pauseBtnWidget: null,
 
   stepSensor: null,
-  stepBaseline: 0,
+  stepCallback: null,
+  stepBaseline: -1,
   totalSteps: 0,
   stepsWidget: null,
 
@@ -298,11 +299,33 @@ function startSensors() {
     logger.debug("HeartRate sensor not available: " + e.message)
   }
 
-  // Step counter
+  // Step counter — uses onChange callback (getCurrent() only valid inside callback)
   try {
     state.stepSensor = new Step()
-    state.stepBaseline = state.stepSensor.getCurrent() || 0
-    logger.debug("Step sensor started, baseline=" + state.stepBaseline)
+    state.stepCallback = function () {
+      try {
+        var current = state.stepSensor.getCurrent() || 0
+        // Capture baseline on first callback fire (sensor was idle before training)
+        if (state.stepBaseline < 0) {
+          state.stepBaseline = current
+          logger.debug("Step sensor baseline captured=" + state.stepBaseline)
+        }
+        if (!state.paused) {
+          state.totalSteps = Math.max(0, current - state.stepBaseline)
+          if (state.session) {
+            state.session.totalSteps = state.totalSteps
+          }
+          if (state.stepsWidget) {
+            state.stepsWidget.setProperty(hmUI.prop.TEXT, state.totalSteps + " pasos")
+          }
+          logger.debug("Step onChange: current=" + current + " baseline=" + state.stepBaseline + " delta=" + state.totalSteps)
+        }
+      } catch (e) {
+        logger.debug("Step onChange error: " + e.message)
+      }
+    }
+    state.stepSensor.onChange(state.stepCallback)
+    logger.debug("Step sensor onChange registered")
   } catch (e) {
     logger.debug("Step sensor not available: " + e.message)
   }
@@ -348,14 +371,9 @@ function startTimers() {
         }
       }
 
-      // Update step count
-      if (state.stepSensor) {
-        var currentSteps = state.stepSensor.getCurrent() || 0
-        state.totalSteps = Math.max(0, currentSteps - state.stepBaseline)
-        session.totalSteps = state.totalSteps
-        if (state.stepsWidget) {
-          state.stepsWidget.setProperty(hmUI.prop.TEXT, state.totalSteps + " pasos")
-        }
+      // Step count display — value is updated in stepCallback; just refresh the widget
+      if (state.stepsWidget && state.stepSensor) {
+        state.stepsWidget.setProperty(hmUI.prop.TEXT, state.totalSteps + " pasos")
       }
     } catch (e) {
       logger.debug("UI timer error: " + e.message)
@@ -701,6 +719,10 @@ function cleanup() {
     state.hrSensor = null
   }
 
+  if (state.stepSensor && state.stepCallback) {
+    state.stepSensor.offChange(state.stepCallback)
+    state.stepCallback = null
+  }
   state.stepSensor = null
 
   if (state.gpsTimerId !== null) {
@@ -939,7 +961,8 @@ Page(
       state.mascotMood = 'neutro'
       state.pauseBtnWidget = null
       state.stepSensor = null
-      state.stepBaseline = 0
+      state.stepCallback = null
+      state.stepBaseline = -1
       state.totalSteps = 0
       state.stepsWidget = null
       state.hrSensor = null
