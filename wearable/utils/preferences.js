@@ -7,6 +7,7 @@ const DEFAULT_PREFERENCES = {
   enableCompanionMessages: true,
   enableAudioMessages: true,
   messageFrequency: 90,
+  speedUnit: 'min_km',
 }
 
 export function loadPreferences() {
