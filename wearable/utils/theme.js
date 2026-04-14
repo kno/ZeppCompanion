@@ -1,3 +1,52 @@
+// ---------------------------------------------------------------------------
+// Design System Tokens
+// ---------------------------------------------------------------------------
+
+// Typography scale (raw numbers — layout files apply px())
+export var FONT_SIZE = {
+  DISPLAY: 48,   // Large numbers (timer, big stats)
+  TITLE: 32,     // Page titles
+  HEADING: 28,   // Section headings, prominent text
+  BODY: 24,      // Body text, secondary buttons
+  SMALL: 20,     // Stats, card names, section labels
+  CAPTION: 16,   // Sub-labels, messages, settings tiny
+  TINY: 14,      // Type labels, duration labels
+}
+
+// Spacing scale (raw numbers — apply px() when used)
+export var SPACING = {
+  XS: 4,
+  SM: 8,
+  MD: 12,
+  LG: 16,
+  XL: 24,
+  XXL: 40,
+}
+
+// Border radii (raw numbers — apply px() when used)
+export var RADII = {
+  SM: 2,     // Accent bars
+  MD: 12,    // Badges
+  LG: 16,    // Cards
+  XL: 24,    // Small buttons
+  PILL: 32,  // Pill buttons, CTA buttons
+  ROUND: 36, // Large round buttons
+}
+
+// Component dimension tokens (raw numbers)
+export var COMPONENT = {
+  MASCOT_W: 150,
+  MASCOT_H: 98,
+  BADGE_W: 110,
+  BADGE_H: 24,
+  CARD_ACCENT_W: 4,
+  PILL_H: 45,
+}
+
+// ---------------------------------------------------------------------------
+// Color Palettes
+// ---------------------------------------------------------------------------
+
 const DARK = {
   PRIMARY: 0x4CAF50,
   PRIMARY_DARK: 0x388E3C,
