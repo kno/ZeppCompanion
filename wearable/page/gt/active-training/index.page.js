@@ -1,7 +1,6 @@
 import * as hmUI from "@zos/ui"
 import { log as Logger } from "@zos/utils"
 import { px } from "@zos/utils"
-import { getDeviceInfo } from "@zos/device"
 import { replace } from "@zos/router"
 import { createTimer, stopTimer } from "@zos/timer"
 import { HeartRate, Geolocation, Step } from "@zos/sensor"
@@ -10,111 +9,23 @@ import { BasePage } from "@zeppos/zml/base-page"
 import { evaluateLocalRules, getFallbackMessage, getFinishMessage, parseHRZones } from "../../../utils/companion-engine"
 import { MASCOT_STATES } from "../../../shared/protocol"
 import { createMascotWidget } from "../../../components/mascot-widget"
-import { playCompanionAudio, destroyPlayer } from "../../../utils/audio-player"
-import { getColors, applyBackground } from "../../../utils/theme"
+import { playCompanionAudio, stopAudio, destroyPlayer } from "../../../utils/audio-player"
+import { getColors, applyBackground, FONT_SIZE } from "../../../utils/theme"
+import {
+  DEVICE_WIDTH,
+  AT,
+  AUDIO_TOGGLE,
+} from "zosLoader:./index.page.[pf].layout.js"
+import { formatTime, formatSpeed, formatSpeedLabel, formatHR } from "../../../utils/format"
+import { savePreferences } from "../../../utils/preferences"
 import { createGpsStatusWidget } from "../../../components/gps-status-widget"
 
 var logger = Logger.getLogger("active-training")
-const { width: W } = getDeviceInfo()
 
 // ---------------------------------------------------------------------------
 // Colors
 // ---------------------------------------------------------------------------
 var COLORS = getColors()
-
-var FONT = {
-  LARGE: 48,
-  MEDIUM: 28,
-  BODY: 24,
-  SMALL: 20,
-  TINY: 16,
-}
-
-// ---------------------------------------------------------------------------
-// Layout
-// ---------------------------------------------------------------------------
-var AT = {
-  TIME_Y: px(30),
-  TIME_SIZE: px(42),
-
-  ARC_X: px(10),
-  ARC_Y: px(10),
-  ARC_SIZE: px(460),
-  ARC_STROKE: px(6),
-
-  HR_Y: px(90),
-  HR_SIZE: px(FONT.MEDIUM),
-
-  PACE_X: px(30),
-  PACE_Y: px(135),
-  PACE_W: px(200),
-
-  DIST_X: px(250),
-  DIST_Y: px(135),
-  DIST_W: px(200),
-
-  STAT_H: px(24),
-  STAT_SIZE: px(FONT.SMALL),
-  LABEL_SIZE: px(14),
-
-  MASCOT_X: (W - px(150)) / 2,
-  MASCOT_Y: px(178),
-  MASCOT_W: px(150),
-  MASCOT_H: px(98),
-
-  STEPS_Y: px(278),
-
-  MSG_X: px(60),
-  MSG_Y: px(322),
-  MSG_W: px(360),
-  MSG_H: px(40),
-  MSG_SIZE: px(FONT.TINY),
-
-  BTN_Y: px(365),
-  BTN_H: px(46),
-  BTN_RADIUS: px(23),
-  PAUSE_X: px(80),
-  PAUSE_W: px(140),
-  STOP_X: px(260),
-  STOP_W: px(140),
-}
-
-// ---------------------------------------------------------------------------
-// Format helpers
-// ---------------------------------------------------------------------------
-function formatTime(ms) {
-  var totalSec = Math.floor(ms / 1000)
-  var min = Math.floor(totalSec / 60)
-  var sec = totalSec % 60
-  return String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0')
-}
-
-function formatPace(secPerKm) {
-  if (!secPerKm || secPerKm <= 0 || secPerKm > 3600) return '--:-- /km'
-  var min = Math.floor(secPerKm / 60)
-  var sec = Math.round(secPerKm % 60)
-  return min + ':' + String(sec).padStart(2, '0') + ' /km'
-}
-
-function formatSpeed(secPerKm) {
-  var prefs = getApp().globalData.userPreferences
-  if (prefs && prefs.speedUnit === 'km_h') {
-    if (!secPerKm || secPerKm <= 0 || secPerKm > 3600) return '-- km/h'
-    var kmh = 3600 / secPerKm
-    return kmh.toFixed(1) + ' km/h'
-  }
-  return formatPace(secPerKm)
-}
-
-function getSpeedLabel() {
-  var prefs = getApp().globalData.userPreferences
-  return (prefs && prefs.speedUnit === 'km_h') ? 'Velocidad' : 'Ritmo'
-}
-
-function formatHR(bpm) {
-  if (!bpm || bpm <= 0) return '-- bpm'
-  return bpm + ' bpm'
-}
 
 function calculateProgress(current, target) {
   if (!target || target <= 0) return 0
@@ -166,6 +77,8 @@ var state = {
   geoSensor: null,
   gpsTimerId: null,
   gpsStatusWidget: null,
+  audioToggleBg: null,
+  audioToggleIcon: null,
 
   training: null,
   session: null,
@@ -834,7 +747,7 @@ function buildUI(training, session) {
   state.timeWidget = hmUI.createWidget(hmUI.widget.TEXT, {
     x: 0,
     y: AT.TIME_Y,
-    w: W,
+    w: DEVICE_WIDTH,
     h: px(50),
     text: '00:00',
     text_size: AT.TIME_SIZE,
@@ -846,7 +759,7 @@ function buildUI(training, session) {
   state.hrWidget = hmUI.createWidget(hmUI.widget.TEXT, {
     x: 0,
     y: AT.HR_Y,
-    w: W,
+    w: DEVICE_WIDTH,
     h: px(34),
     text: '-- bpm',
     text_size: AT.HR_SIZE,
@@ -871,7 +784,7 @@ function buildUI(training, session) {
     y: AT.PACE_Y + AT.STAT_H,
     w: AT.PACE_W,
     h: px(18),
-    text: getSpeedLabel(),
+    text: formatSpeedLabel(false),
     text_size: AT.LABEL_SIZE,
     color: COLORS.TEXT_DIMMED,
     align_h: hmUI.align.CENTER_H,
@@ -904,7 +817,7 @@ function buildUI(training, session) {
   state.stepsWidget = hmUI.createWidget(hmUI.widget.TEXT, {
     x: 0,
     y: AT.STEPS_Y,
-    w: W,
+    w: DEVICE_WIDTH,
     h: AT.STAT_H,
     text: '0 pasos',
     text_size: AT.STAT_SIZE,
@@ -915,7 +828,7 @@ function buildUI(training, session) {
   hmUI.createWidget(hmUI.widget.TEXT, {
     x: 0,
     y: AT.STEPS_Y + AT.STAT_H,
-    w: W,
+    w: DEVICE_WIDTH,
     h: px(18),
     text: 'Pasos',
     text_size: AT.LABEL_SIZE,
@@ -952,7 +865,7 @@ function buildUI(training, session) {
     w: AT.PAUSE_W,
     h: AT.BTN_H,
     text: 'Pausa',
-    text_size: px(FONT.SMALL),
+    text_size: AT.STAT_SIZE,
     radius: AT.BTN_RADIUS,
     normal_color: COLORS.BG_CARD,
     press_color: COLORS.BG_CARD_HOVER,
@@ -968,13 +881,73 @@ function buildUI(training, session) {
     w: AT.STOP_W,
     h: AT.BTN_H,
     text: 'Terminar',
-    text_size: px(FONT.SMALL),
+    text_size: AT.STAT_SIZE,
     radius: AT.BTN_RADIUS,
     normal_color: COLORS.ERROR_RED,
     press_color: 0xC62828,
     click_func: function () {
       finishTraining()
     },
+  })
+
+  // Audio toggle icon (right edge, vertically centered — mirrors GPS on left)
+  var audioSize = AUDIO_TOGGLE.size
+  var audioIconSize = AUDIO_TOGGLE.iconSize
+  var audioIconOffset = AUDIO_TOGGLE.iconOffset
+  var audioX = AUDIO_TOGGLE.x
+  var audioY = AUDIO_TOGGLE.y
+  var audioPrefsInit = getApp().globalData.userPreferences
+  var audioEnabled = !audioPrefsInit || audioPrefsInit.enableAudioMessages !== false
+
+  state.audioToggleBg = hmUI.createWidget(hmUI.widget.FILL_RECT, {
+    x: px(audioX),
+    y: px(audioY),
+    w: px(audioSize),
+    h: px(audioSize),
+    radius: px(audioSize / 2),
+    color: audioEnabled ? 0x4CAF50 : 0x616161,
+  })
+
+  state.audioToggleIcon = hmUI.createWidget(hmUI.widget.IMG, {
+    x: px(audioX + audioIconOffset),
+    y: px(audioY + audioIconOffset),
+    w: px(audioIconSize),
+    h: px(audioIconSize),
+    src: audioEnabled ? 'icon_audio_on.png' : 'icon_audio_off.png',
+  })
+
+  // Click handler on background circle
+  state.audioToggleBg.addEventListener(hmUI.event.CLICK_UP, function () {
+    var prefs = getApp().globalData.userPreferences
+    var isEnabled = !prefs || prefs.enableAudioMessages !== false
+    var newVal = !isEnabled
+    prefs.enableAudioMessages = newVal
+    getApp().globalData.userPreferences = prefs
+    savePreferences(prefs)
+
+    state.audioToggleBg.setProperty(hmUI.prop.COLOR, newVal ? 0x4CAF50 : 0x616161)
+    state.audioToggleIcon.setProperty(hmUI.prop.SRC, newVal ? 'icon_audio_on.png' : 'icon_audio_off.png')
+
+    if (!newVal) {
+      stopAudio()
+    }
+  })
+
+  // Also handle click on the icon itself
+  state.audioToggleIcon.addEventListener(hmUI.event.CLICK_UP, function () {
+    var prefs = getApp().globalData.userPreferences
+    var isEnabled = !prefs || prefs.enableAudioMessages !== false
+    var newVal = !isEnabled
+    prefs.enableAudioMessages = newVal
+    getApp().globalData.userPreferences = prefs
+    savePreferences(prefs)
+
+    state.audioToggleBg.setProperty(hmUI.prop.COLOR, newVal ? 0x4CAF50 : 0x616161)
+    state.audioToggleIcon.setProperty(hmUI.prop.SRC, newVal ? 'icon_audio_on.png' : 'icon_audio_off.png')
+
+    if (!newVal) {
+      stopAudio()
+    }
   })
 
   // GPS status indicator (created last for highest z-order)
@@ -1014,6 +987,8 @@ Page(
       state.geoSensor = null
       state.gpsTimerId = null
       state.gpsStatusWidget = null
+      state.audioToggleBg = null
+      state.audioToggleIcon = null
       state.hrReadingsAll = []
       state.maxHR = 0
       state.paused = false
@@ -1055,10 +1030,10 @@ Page(
         hmUI.createWidget(hmUI.widget.TEXT, {
           x: 0,
           y: px(200),
-          w: W,
+          w: DEVICE_WIDTH,
           h: px(40),
           text: 'Error: sin sesion activa',
-          text_size: px(FONT.BODY),
+          text_size: px(FONT_SIZE.BODY),
           color: COLORS.ERROR_RED,
           align_h: hmUI.align.CENTER_H,
         })

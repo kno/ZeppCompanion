@@ -1,21 +1,23 @@
 import * as hmUI from "@zos/ui"
 import { log as Logger } from "@zos/utils"
 import { px } from "@zos/utils"
-import { getDeviceInfo } from "@zos/device"
 import { back } from "@zos/router"
 import { getColors, applyBackground } from "../../../utils/theme"
 import { savePreferences } from "../../../utils/preferences"
 import { createGpsStatusWidget } from "../../../components/gps-status-widget"
+import {
+  DEVICE_WIDTH,
+  TITLE_STYLE,
+  SECTION_LABEL_STYLE,
+  SECTION_Y,
+  PILL_DIMS,
+  PILL_TRIPLE_DIMS,
+  FREQ_LABEL_STYLE,
+  VERSION_STYLE,
+  BACK_BUTTON,
+} from "zosLoader:./index.page.[pf].layout.js"
 
 const logger = Logger.getLogger("settings")
-const { width: W } = getDeviceInfo()
-
-const FONT = {
-  MEDIUM: 28,
-  BODY: 24,
-  SMALL: 20,
-  TINY: 16,
-}
 
 const MESSAGE_FREQUENCY = {
   HIGH: 60,
@@ -36,31 +38,22 @@ function getFrequencyLabel(freq) {
 
 // Create a pill-shaped button using FILL_RECT + TEXT + click handler
 // Returns { bg, text } widget references
-function createPillButton(x, y, w, h, label, isActive, onClick) {
+function createPillButton(x, y, w, h, radius, label, isActive, onClick) {
   var bg = hmUI.createWidget(hmUI.widget.FILL_RECT, {
-    x: px(x),
-    y: px(y),
-    w: px(w),
-    h: px(h),
-    radius: px(h / 2),
+    x: x, y: y, w: w, h: h,
+    radius: radius,
     color: isActive ? COLORS.PRIMARY : COLORS.BG_CARD,
   })
-
   var txt = hmUI.createWidget(hmUI.widget.TEXT, {
-    x: px(x),
-    y: px(y),
-    w: px(w),
-    h: px(h),
+    x: x, y: y, w: w, h: h,
     text: label,
-    text_size: px(FONT.TINY),
+    text_size: px(16),
     color: COLORS.WHITE,
     align_h: hmUI.align.CENTER_H,
     align_v: hmUI.align.CENTER_V,
   })
-
   bg.addEventListener(hmUI.event.CLICK_UP, onClick)
   txt.addEventListener(hmUI.event.CLICK_UP, onClick)
-
   return { bg: bg }
 }
 
@@ -102,162 +95,180 @@ Page({
 
     // ── Title ────────────────────────────────────────────────────────────
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(0),
-      y: px(50),
-      w: W,
-      h: px(40),
+      ...TITLE_STYLE,
       text: "Configuracion",
-      text_size: px(FONT.MEDIUM),
-      color: COLORS.WHITE,
-      align_h: hmUI.align.CENTER_H,
     })
 
     // ── Section: Modo visual ─────────────────────────────────────────────
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(40), y: px(120), w: px(400), h: px(24),
+      ...SECTION_LABEL_STYLE,
+      y: SECTION_Y.VISUAL,
       text: "Modo visual",
-      text_size: px(FONT.SMALL),
-      color: COLORS.TEXT_SECONDARY,
     })
 
-    darkOnPill = createPillButton(110, 155, 140, 45, "Oscuro", prefs.darkMode !== false, function () {
-      var a = getApp()
-      a.globalData.userPreferences.darkMode = true
-      savePreferences(a.globalData.userPreferences)
-      COLORS = getColors()
-      setActive(darkOnPill, darkOffPill)
-    })
-    darkOffPill = createPillButton(260, 155, 140, 45, "Claro", prefs.darkMode === false, function () {
-      var a = getApp()
-      a.globalData.userPreferences.darkMode = false
-      savePreferences(a.globalData.userPreferences)
-      COLORS = getColors()
-      setActive(darkOffPill, darkOnPill)
-    })
+    darkOnPill = createPillButton(
+      PILL_DIMS.leftX, SECTION_Y.VISUAL + PILL_DIMS.pillOffsetY,
+      PILL_DIMS.w, PILL_DIMS.h, PILL_DIMS.radius,
+      "Oscuro", prefs.darkMode !== false, function () {
+        var a = getApp()
+        a.globalData.userPreferences.darkMode = true
+        savePreferences(a.globalData.userPreferences)
+        COLORS = getColors()
+        setActive(darkOnPill, darkOffPill)
+      })
+    darkOffPill = createPillButton(
+      PILL_DIMS.rightX, SECTION_Y.VISUAL + PILL_DIMS.pillOffsetY,
+      PILL_DIMS.w, PILL_DIMS.h, PILL_DIMS.radius,
+      "Claro", prefs.darkMode === false, function () {
+        var a = getApp()
+        a.globalData.userPreferences.darkMode = false
+        savePreferences(a.globalData.userPreferences)
+        COLORS = getColors()
+        setActive(darkOffPill, darkOnPill)
+      })
 
     // ── Section: Mensajes motivadores ─────────────────────────────────────
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(40), y: px(220), w: px(400), h: px(24),
+      ...SECTION_LABEL_STYLE,
+      y: SECTION_Y.MESSAGES,
       text: "Mensajes motivadores",
-      text_size: px(FONT.SMALL),
-      color: COLORS.TEXT_SECONDARY,
     })
 
-    msgOnPill = createPillButton(110, 255, 140, 45, "ON", prefs.enableCompanionMessages !== false, function () {
-      var a = getApp()
-      a.globalData.userPreferences.enableCompanionMessages = true
-      savePreferences(a.globalData.userPreferences)
-      setActive(msgOnPill, msgOffPill)
-    })
-    msgOffPill = createPillButton(260, 255, 140, 45, "OFF", prefs.enableCompanionMessages === false, function () {
-      var a = getApp()
-      a.globalData.userPreferences.enableCompanionMessages = false
-      savePreferences(a.globalData.userPreferences)
-      setActive(msgOffPill, msgOnPill)
-    })
+    msgOnPill = createPillButton(
+      PILL_DIMS.leftX, SECTION_Y.MESSAGES + PILL_DIMS.pillOffsetY,
+      PILL_DIMS.w, PILL_DIMS.h, PILL_DIMS.radius,
+      "ON", prefs.enableCompanionMessages !== false, function () {
+        var a = getApp()
+        a.globalData.userPreferences.enableCompanionMessages = true
+        savePreferences(a.globalData.userPreferences)
+        setActive(msgOnPill, msgOffPill)
+      })
+    msgOffPill = createPillButton(
+      PILL_DIMS.rightX, SECTION_Y.MESSAGES + PILL_DIMS.pillOffsetY,
+      PILL_DIMS.w, PILL_DIMS.h, PILL_DIMS.radius,
+      "OFF", prefs.enableCompanionMessages === false, function () {
+        var a = getApp()
+        a.globalData.userPreferences.enableCompanionMessages = false
+        savePreferences(a.globalData.userPreferences)
+        setActive(msgOffPill, msgOnPill)
+      })
 
     // ── Section: Audio ────────────────────────────────────────────────────
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(40), y: px(320), w: px(400), h: px(24),
+      ...SECTION_LABEL_STYLE,
+      y: SECTION_Y.AUDIO,
       text: "Audio de companero",
-      text_size: px(FONT.SMALL),
-      color: COLORS.TEXT_SECONDARY,
     })
 
-    audioOnPill = createPillButton(110, 355, 140, 45, "ON", prefs.enableAudioMessages !== false, function () {
-      var a = getApp()
-      a.globalData.userPreferences.enableAudioMessages = true
-      savePreferences(a.globalData.userPreferences)
-      setActive(audioOnPill, audioOffPill)
-    })
-    audioOffPill = createPillButton(260, 355, 140, 45, "OFF", prefs.enableAudioMessages === false, function () {
-      var a = getApp()
-      a.globalData.userPreferences.enableAudioMessages = false
-      savePreferences(a.globalData.userPreferences)
-      setActive(audioOffPill, audioOnPill)
-    })
+    audioOnPill = createPillButton(
+      PILL_DIMS.leftX, SECTION_Y.AUDIO + PILL_DIMS.pillOffsetY,
+      PILL_DIMS.w, PILL_DIMS.h, PILL_DIMS.radius,
+      "ON", prefs.enableAudioMessages !== false, function () {
+        var a = getApp()
+        a.globalData.userPreferences.enableAudioMessages = true
+        savePreferences(a.globalData.userPreferences)
+        setActive(audioOnPill, audioOffPill)
+      })
+    audioOffPill = createPillButton(
+      PILL_DIMS.rightX, SECTION_Y.AUDIO + PILL_DIMS.pillOffsetY,
+      PILL_DIMS.w, PILL_DIMS.h, PILL_DIMS.radius,
+      "OFF", prefs.enableAudioMessages === false, function () {
+        var a = getApp()
+        a.globalData.userPreferences.enableAudioMessages = false
+        savePreferences(a.globalData.userPreferences)
+        setActive(audioOffPill, audioOnPill)
+      })
 
     // ── Section: Velocidad ────────────────────────────────────────────────
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(40), y: px(420), w: px(400), h: px(24),
+      ...SECTION_LABEL_STYLE,
+      y: SECTION_Y.SPEED,
       text: "Velocidad",
-      text_size: px(FONT.SMALL),
-      color: COLORS.TEXT_SECONDARY,
     })
 
     var currentSpeed = prefs.speedUnit || 'min_km'
-    speedMinKmPill = createPillButton(110, 455, 140, 45, "min/km", currentSpeed === 'min_km', function () {
-      var a = getApp()
-      a.globalData.userPreferences.speedUnit = 'min_km'
-      savePreferences(a.globalData.userPreferences)
-      setActive(speedMinKmPill, speedKmHPill)
-    })
-    speedKmHPill = createPillButton(260, 455, 140, 45, "km/h", currentSpeed === 'km_h', function () {
-      var a = getApp()
-      a.globalData.userPreferences.speedUnit = 'km_h'
-      savePreferences(a.globalData.userPreferences)
-      setActive(speedKmHPill, speedMinKmPill)
-    })
+    speedMinKmPill = createPillButton(
+      PILL_DIMS.leftX, SECTION_Y.SPEED + PILL_DIMS.pillOffsetY,
+      PILL_DIMS.w, PILL_DIMS.h, PILL_DIMS.radius,
+      "min/km", currentSpeed === 'min_km', function () {
+        var a = getApp()
+        a.globalData.userPreferences.speedUnit = 'min_km'
+        savePreferences(a.globalData.userPreferences)
+        setActive(speedMinKmPill, speedKmHPill)
+      })
+    speedKmHPill = createPillButton(
+      PILL_DIMS.rightX, SECTION_Y.SPEED + PILL_DIMS.pillOffsetY,
+      PILL_DIMS.w, PILL_DIMS.h, PILL_DIMS.radius,
+      "km/h", currentSpeed === 'km_h', function () {
+        var a = getApp()
+        a.globalData.userPreferences.speedUnit = 'km_h'
+        savePreferences(a.globalData.userPreferences)
+        setActive(speedKmHPill, speedMinKmPill)
+      })
 
     // ── Section: Frecuencia ───────────────────────────────────────────────
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(40), y: px(520), w: px(400), h: px(24),
+      ...SECTION_LABEL_STYLE,
+      y: SECTION_Y.FREQUENCY,
       text: "Frecuencia de mensajes",
-      text_size: px(FONT.SMALL),
-      color: COLORS.TEXT_SECONDARY,
     })
 
     freqLabelWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(0), y: px(552), w: W, h: px(30),
+      ...FREQ_LABEL_STYLE,
       text: getFrequencyLabel(prefs.messageFrequency || 90),
-      text_size: px(FONT.BODY),
-      color: COLORS.ACCENT,
-      align_h: hmUI.align.CENTER_H,
     })
 
     var currentFreq = prefs.messageFrequency || 90
 
-    freqHighPill = createPillButton(50, 592, 110, 45, "Alta", currentFreq <= 60, function () {
-      var a = getApp()
-      a.globalData.userPreferences.messageFrequency = MESSAGE_FREQUENCY.HIGH
-      savePreferences(a.globalData.userPreferences)
-      freqLabelWidget.setProperty(hmUI.prop.TEXT, getFrequencyLabel(MESSAGE_FREQUENCY.HIGH))
-      setActiveFreq(freqHighPill, [freqMedPill, freqLowPill])
-    })
-    freqMedPill = createPillButton(185, 592, 110, 45, "Media", currentFreq > 60 && currentFreq <= 90, function () {
-      var a = getApp()
-      a.globalData.userPreferences.messageFrequency = MESSAGE_FREQUENCY.MEDIUM
-      savePreferences(a.globalData.userPreferences)
-      freqLabelWidget.setProperty(hmUI.prop.TEXT, getFrequencyLabel(MESSAGE_FREQUENCY.MEDIUM))
-      setActiveFreq(freqMedPill, [freqHighPill, freqLowPill])
-    })
-    freqLowPill = createPillButton(320, 592, 110, 45, "Baja", currentFreq > 90, function () {
-      var a = getApp()
-      a.globalData.userPreferences.messageFrequency = MESSAGE_FREQUENCY.LOW
-      savePreferences(a.globalData.userPreferences)
-      freqLabelWidget.setProperty(hmUI.prop.TEXT, getFrequencyLabel(MESSAGE_FREQUENCY.LOW))
-      setActiveFreq(freqLowPill, [freqHighPill, freqMedPill])
-    })
+    freqHighPill = createPillButton(
+      PILL_TRIPLE_DIMS.x1, px(592),
+      PILL_TRIPLE_DIMS.w, PILL_TRIPLE_DIMS.h, PILL_TRIPLE_DIMS.radius,
+      "Alta", currentFreq <= 60, function () {
+        var a = getApp()
+        a.globalData.userPreferences.messageFrequency = MESSAGE_FREQUENCY.HIGH
+        savePreferences(a.globalData.userPreferences)
+        freqLabelWidget.setProperty(hmUI.prop.TEXT, getFrequencyLabel(MESSAGE_FREQUENCY.HIGH))
+        setActiveFreq(freqHighPill, [freqMedPill, freqLowPill])
+      })
+    freqMedPill = createPillButton(
+      PILL_TRIPLE_DIMS.x2, px(592),
+      PILL_TRIPLE_DIMS.w, PILL_TRIPLE_DIMS.h, PILL_TRIPLE_DIMS.radius,
+      "Media", currentFreq > 60 && currentFreq <= 90, function () {
+        var a = getApp()
+        a.globalData.userPreferences.messageFrequency = MESSAGE_FREQUENCY.MEDIUM
+        savePreferences(a.globalData.userPreferences)
+        freqLabelWidget.setProperty(hmUI.prop.TEXT, getFrequencyLabel(MESSAGE_FREQUENCY.MEDIUM))
+        setActiveFreq(freqMedPill, [freqHighPill, freqLowPill])
+      })
+    freqLowPill = createPillButton(
+      PILL_TRIPLE_DIMS.x3, px(592),
+      PILL_TRIPLE_DIMS.w, PILL_TRIPLE_DIMS.h, PILL_TRIPLE_DIMS.radius,
+      "Baja", currentFreq > 90, function () {
+        var a = getApp()
+        a.globalData.userPreferences.messageFrequency = MESSAGE_FREQUENCY.LOW
+        savePreferences(a.globalData.userPreferences)
+        freqLabelWidget.setProperty(hmUI.prop.TEXT, getFrequencyLabel(MESSAGE_FREQUENCY.LOW))
+        setActiveFreq(freqLowPill, [freqHighPill, freqMedPill])
+      })
 
     // ── Version ───────────────────────────────────────────────────────────
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(0), y: px(660), w: W, h: px(24),
+      ...VERSION_STYLE,
       text: "ZeppCompanion v1.0.0",
-      text_size: px(FONT.TINY),
-      color: COLORS.TEXT_DIMMED,
-      align_h: hmUI.align.CENTER_H,
     })
 
     // ── Back button ───────────────────────────────────────────────────────
     var backBg = hmUI.createWidget(hmUI.widget.FILL_RECT, {
-      x: px(90), y: px(695), w: px(300), h: px(50),
-      radius: px(30),
+      x: BACK_BUTTON.x, y: BACK_BUTTON.y,
+      w: BACK_BUTTON.w, h: BACK_BUTTON.h,
+      radius: BACK_BUTTON.radius,
       color: COLORS.BG_CARD,
     })
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(90), y: px(695), w: px(300), h: px(50),
+      x: BACK_BUTTON.x, y: BACK_BUTTON.y,
+      w: BACK_BUTTON.w, h: BACK_BUTTON.h,
       text: "Volver",
-      text_size: px(FONT.BODY),
+      text_size: BACK_BUTTON.text_size,
       color: COLORS.WHITE,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,

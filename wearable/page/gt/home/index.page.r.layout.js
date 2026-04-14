@@ -1,7 +1,7 @@
 import * as hmUI from "@zos/ui";
 import { getDeviceInfo } from "@zos/device";
 import { px } from "@zos/utils";
-import { getColors } from "../../../utils/theme";
+import { getColors, FONT_SIZE, RADII, COMPONENT } from "../../../utils/theme";
 
 export const { width: DEVICE_WIDTH, height: DEVICE_HEIGHT } = getDeviceInfo();
 
@@ -12,7 +12,7 @@ export const TITLE_STYLE = {
   w: DEVICE_WIDTH,
   h: px(40),
   color: getColors().WHITE,
-  text_size: px(30),
+  text_size: px(FONT_SIZE.TITLE - 2),
   align_h: hmUI.align.CENTER_H,
 };
 
@@ -23,15 +23,15 @@ export const SUBTITLE_STYLE = {
   w: DEVICE_WIDTH,
   h: px(25),
   color: getColors().TEXT_SECONDARY,
-  text_size: px(16),
+  text_size: px(FONT_SIZE.CAPTION),
   align_h: hmUI.align.CENTER_H,
 };
 
 export const MASCOT_STYLE = {
-  x: (DEVICE_WIDTH - px(150)) / 2,
+  x: (DEVICE_WIDTH - px(COMPONENT.MASCOT_W)) / 2,
   y: px(180),
-  w: px(150),
-  h: px(98),
+  w: px(COMPONENT.MASCOT_W),
+  h: px(COMPONENT.MASCOT_H),
 };
 
 export const BUTTON_START_STYLE = {
@@ -39,8 +39,8 @@ export const BUTTON_START_STYLE = {
   y: px(310),
   w: px(350),
   h: px(82),
-  text_size: px(32),
-  radius: px(36),
+  text_size: px(FONT_SIZE.TITLE),
+  radius: px(RADII.ROUND),
   normal_color: getColors().PRIMARY,
   press_color: getColors().PRIMARY_DARK,
 };

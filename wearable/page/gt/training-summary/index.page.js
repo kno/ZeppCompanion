@@ -1,71 +1,32 @@
 import * as hmUI from "@zos/ui";
 import { log as Logger } from "@zos/utils";
 import { px } from "@zos/utils";
-import { getDeviceInfo } from "@zos/device";
 import { replace } from "@zos/router";
 import { getColors, applyBackground } from "../../../utils/theme";
 import { createGpsStatusWidget } from "../../../components/gps-status-widget";
+import {
+  DEVICE_WIDTH,
+  TITLE_STYLE,
+  SUBTITLE_STYLE,
+  TIME_VALUE_STYLE,
+  TIME_LABEL_STYLE,
+  METRIC_LEFT,
+  METRIC_RIGHT,
+  METRIC_VALUE_SIZE,
+  METRIC_LABEL_SIZE,
+  PACE_STYLE,
+  CONGRATS_STYLE,
+  BUTTON_BACK_STYLE,
+} from "zosLoader:./index.page.[pf].layout.js"
+import { formatTimeLong, formatSpeed, formatSpeedLabel, formatDistance } from "../../../utils/format"
 
 const logger = Logger.getLogger("training-summary");
-const { width: W } = getDeviceInfo();
-
-var COLORS = getColors();
-
-const FONT = {
-  TITLE: 32,
-  LARGE: 48,
-  BODY: 24,
-  SMALL: 20,
-  TINY: 16,
-};
 
 var pageState = {
   pageInstance: null,
   savedWidget: null,
   gpsWidget: null,
 };
-
-function formatTimeLong(ms) {
-  var totalSec = Math.floor(ms / 1000);
-  var hrs = Math.floor(totalSec / 3600);
-  var min = Math.floor((totalSec % 3600) / 60);
-  var sec = totalSec % 60;
-  return (
-    String(hrs).padStart(2, "0") +
-    ":" +
-    String(min).padStart(2, "0") +
-    ":" +
-    String(sec).padStart(2, "0")
-  );
-}
-
-function formatPace(secPerKm) {
-  if (!secPerKm || secPerKm <= 0 || secPerKm > 3600) return "--:-- /km";
-  var min = Math.floor(secPerKm / 60);
-  var sec = Math.round(secPerKm % 60);
-  return min + ":" + String(sec).padStart(2, "0") + " /km";
-}
-
-function formatSpeed(secPerKm) {
-  var prefs = getApp().globalData.userPreferences;
-  if (prefs && prefs.speedUnit === 'km_h') {
-    if (!secPerKm || secPerKm <= 0 || secPerKm > 3600) return '-- km/h';
-    var kmh = 3600 / secPerKm;
-    return kmh.toFixed(1) + ' km/h';
-  }
-  return formatPace(secPerKm);
-}
-
-function getSpeedLabel() {
-  var prefs = getApp().globalData.userPreferences;
-  return (prefs && prefs.speedUnit === 'km_h') ? 'Velocidad media' : 'Ritmo medio';
-}
-
-function formatDistance(meters) {
-  if (!meters || meters < 0) return "0 m";
-  if (meters < 1000) return Math.round(meters) + " m";
-  return (meters / 1000).toFixed(2) + " km";
-}
 
 Page({
     onInit() {
@@ -78,7 +39,7 @@ Page({
       logger.debug("training-summary build START");
       pageState.pageInstance = this;
 
-      COLORS = getColors()
+      var COLORS = getColors()
       applyBackground()
 
       var app = getApp();
@@ -87,26 +48,14 @@ Page({
 
       // Title
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(0),
-        y: px(30),
-        w: W,
-        h: px(40),
+        ...TITLE_STYLE,
         text: "Resumen",
-        text_size: px(FONT.TITLE),
-        color: COLORS.WHITE,
-        align_h: hmUI.align.CENTER_H,
       });
 
       // Training name subtitle
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(0),
-        y: px(75),
-        w: W,
-        h: px(30),
+        ...SUBTITLE_STYLE,
         text: training ? training.name : "Entrenamiento",
-        text_size: px(FONT.SMALL),
-        color: COLORS.TEXT_SECONDARY,
-        align_h: hmUI.align.CENTER_H,
       });
 
       // Compute averages
@@ -127,126 +76,88 @@ Page({
 
       // Total time value
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(0),
-        y: px(120),
-        w: W,
-        h: px(50),
+        ...TIME_VALUE_STYLE,
         text: formatTimeLong(elapsedMs),
-        text_size: px(FONT.LARGE),
-        color: COLORS.WHITE,
-        align_h: hmUI.align.CENTER_H,
       });
 
       // Total time label
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(0),
-        y: px(170),
-        w: W,
-        h: px(24),
+        ...TIME_LABEL_STYLE,
         text: "Tiempo total",
-        text_size: px(FONT.TINY),
-        color: COLORS.TEXT_SECONDARY,
-        align_h: hmUI.align.CENTER_H,
       });
 
       // Distance
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(40),
-        y: px(210),
-        w: px(180),
-        h: px(30),
+        x: METRIC_LEFT.x, y: METRIC_LEFT.y,
+        w: METRIC_LEFT.w, h: METRIC_LEFT.valueH,
         text: formatDistance(session ? session.distanceMeters : 0),
-        text_size: px(FONT.BODY),
+        text_size: METRIC_VALUE_SIZE,
         color: COLORS.ACCENT,
         align_h: hmUI.align.CENTER_H,
       });
 
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(40),
-        y: px(240),
-        w: px(180),
-        h: px(20),
+        x: METRIC_LEFT.x, y: METRIC_LEFT.labelY,
+        w: METRIC_LEFT.w, h: METRIC_LEFT.labelH,
         text: "Distancia",
-        text_size: px(FONT.TINY),
+        text_size: METRIC_LABEL_SIZE,
         color: COLORS.TEXT_SECONDARY,
         align_h: hmUI.align.CENTER_H,
       });
 
       // Avg HR
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(260),
-        y: px(210),
-        w: px(180),
-        h: px(30),
+        x: METRIC_RIGHT.x, y: METRIC_RIGHT.y,
+        w: METRIC_RIGHT.w, h: METRIC_RIGHT.valueH,
         text: avgHR > 0 ? String(avgHR) + " bpm" : "-- bpm",
-        text_size: px(FONT.BODY),
+        text_size: METRIC_VALUE_SIZE,
         color: COLORS.HR_RED,
         align_h: hmUI.align.CENTER_H,
       });
 
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(260),
-        y: px(240),
-        w: px(180),
-        h: px(20),
+        x: METRIC_RIGHT.x, y: METRIC_RIGHT.labelY,
+        w: METRIC_RIGHT.w, h: METRIC_RIGHT.labelH,
         text: "FC Media",
-        text_size: px(FONT.TINY),
+        text_size: METRIC_LABEL_SIZE,
         color: COLORS.TEXT_SECONDARY,
         align_h: hmUI.align.CENTER_H,
       });
 
       // Avg Pace / Speed
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(0),
-        y: px(280),
-        w: W,
-        h: px(30),
+        x: PACE_STYLE.x, y: PACE_STYLE.y,
+        w: PACE_STYLE.w, h: PACE_STYLE.valueH,
         text: formatSpeed(session ? session.currentPace : 0),
-        text_size: px(FONT.BODY),
+        text_size: METRIC_VALUE_SIZE,
         color: COLORS.PACE_BLUE,
         align_h: hmUI.align.CENTER_H,
       });
 
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(0),
-        y: px(310),
-        w: W,
-        h: px(20),
-        text: getSpeedLabel(),
-        text_size: px(FONT.TINY),
+        x: PACE_STYLE.x, y: PACE_STYLE.labelY,
+        w: PACE_STYLE.w, h: PACE_STYLE.labelH,
+        text: formatSpeedLabel(false),
+        text_size: METRIC_LABEL_SIZE,
         color: COLORS.TEXT_SECONDARY,
         align_h: hmUI.align.CENTER_H,
       });
 
       // Congratulation message
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(40),
-        y: px(340),
-        w: px(400),
-        h: px(40),
+        ...CONGRATS_STYLE,
         text: "Gran trabajo! Has completado tu entrenamiento.",
-        text_size: px(FONT.SMALL),
-        color: COLORS.WARNING_YELLOW,
-        align_h: hmUI.align.CENTER_H,
-        text_style: hmUI.text_style.WRAP,
       });
 
       // Volver button
       hmUI.createWidget(hmUI.widget.BUTTON, {
-        x: px(90),
-        y: px(390),
-        w: px(300),
-        h: px(55),
+        ...BUTTON_BACK_STYLE,
         text: "Volver al inicio",
-        text_size: px(FONT.BODY),
-        radius: px(30),
-        normal_color: COLORS.BG_CARD,
-        press_color: COLORS.BG_CARD_HOVER,
         click_func: function () {
-          var a = getApp();
-          a.globalData.trainingSession = null;
-          a.globalData.currentTraining = null;
-          replace({ url: "page/gt/home/index.page" });
+          var a = getApp()
+          a.globalData.trainingSession = null
+          a.globalData.currentTraining = null
+          replace({ url: "page/gt/home/index.page" })
         },
       });
 

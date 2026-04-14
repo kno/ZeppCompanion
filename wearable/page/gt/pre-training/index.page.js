@@ -1,24 +1,28 @@
 import * as hmUI from "@zos/ui";
 import { log as Logger } from "@zos/utils";
-import { getDeviceInfo } from "@zos/device";
 import { px } from "@zos/utils";
 import { replace } from "@zos/router";
 import { createMascotWidget } from "../../../components/mascot-widget";
 import { getColors, applyBackground } from "../../../utils/theme";
 import { createGpsStatusWidget } from "../../../components/gps-status-widget";
+import {
+  DEVICE_WIDTH,
+  MASCOT_STYLE,
+  NAME_STYLE,
+  BADGE_STYLE,
+  CARD_STYLE,
+  CARD_ACCENT,
+  ROW_DIMS,
+  ROW_LABEL_STYLE,
+  ROW_VALUE_STYLE,
+  STATUS_STYLE,
+  BUTTON_START_STYLE,
+  ERROR_STYLE,
+} from "zosLoader:./index.page.[pf].layout.js"
+import { getTypeInfo } from "../../../utils/training-types"
+import { formatSpeed, formatSpeedLabel } from "../../../utils/format"
 
 const logger = Logger.getLogger("pre-training");
-const { width: W } = getDeviceInfo();
-
-var COLORS = getColors();
-
-const FONT = {
-  LARGE: 34,
-  MEDIUM: 28,
-  BODY: 22,
-  SMALL: 18,
-  TINY: 15,
-};
 
 var pageState = {
   mascot: null,
@@ -26,45 +30,6 @@ var pageState = {
   startingTraining: false,
   gpsWidget: null,
 };
-
-function getTypeInfo(type) {
-  switch (type) {
-    case "cardio_continuous":
-      return { label: "Cardio", color: 0x4caf50 };
-    case "intervals":
-      return { label: "Intervalos", color: 0xff9800 };
-    case "free":
-      return { label: "Libre", color: 0x58d0ff };
-    case "strength":
-      return { label: "Fuerza", color: 0xe040fb };
-    case "recovery":
-      return { label: "Recuperacion", color: 0x5be7a9 };
-    default:
-      return { label: "Entreno", color: 0x888888 };
-  }
-}
-
-function formatPace(secPerKm) {
-  if (!secPerKm || secPerKm <= 0 || secPerKm > 3600) return "--:-- /km";
-  var min = Math.floor(secPerKm / 60);
-  var sec = Math.round(secPerKm % 60);
-  return min + ":" + String(sec).padStart(2, "0") + " /km";
-}
-
-function formatSpeed(secPerKm) {
-  var prefs = getApp().globalData.userPreferences;
-  if (prefs && prefs.speedUnit === 'km_h') {
-    if (!secPerKm || secPerKm <= 0 || secPerKm > 3600) return '-- km/h';
-    var kmh = 3600 / secPerKm;
-    return kmh.toFixed(1) + ' km/h';
-  }
-  return formatPace(secPerKm);
-}
-
-function getSpeedGoalLabel() {
-  var prefs = getApp().globalData.userPreferences;
-  return (prefs && prefs.speedUnit === 'km_h') ? 'Velocidad objetivo' : 'Ritmo objetivo';
-}
 
 function startTraining(training) {
   if (pageState.startingTraining) return;
@@ -110,7 +75,7 @@ Page({
   build() {
     logger.debug("pre-training build START");
 
-    COLORS = getColors()
+    var COLORS = getColors()
     applyBackground()
 
     var app = getApp();
@@ -118,15 +83,8 @@ Page({
 
     if (!training) {
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: px(0),
-        y: px(200),
-        w: W,
-        h: px(50),
+        ...ERROR_STYLE,
         text: "Error: sin entrenamiento",
-        text_size: px(FONT.BODY),
-        color: COLORS.ERROR_RED,
-        align_h: hmUI.align.CENTER_H,
-        align_v: hmUI.align.CENTER_V,
       });
       return;
     }
@@ -134,174 +92,119 @@ Page({
     var typeInfo = getTypeInfo(training.type);
 
     // ── Mascot (top, centered, feliz mood) ─────────────────────────────────
-    var mascotW = px(150);
-    var mascotH = px(98);
-    var mascotX = (W - mascotW) / 2;
-    var mascotY = px(42);
-
     pageState.mascot = createMascotWidget({
-      x: mascotX,
-      y: mascotY,
-      w: mascotW,
-      h: mascotH,
+      x: MASCOT_STYLE.x,
+      y: MASCOT_STYLE.y,
+      w: MASCOT_STYLE.w,
+      h: MASCOT_STYLE.h,
       initialMood: "feliz",
     });
 
     // ── Training name ───────────────────────────────────────────────────────
-    var nameY = mascotY + mascotH + px(4);
+    var nameY = MASCOT_STYLE.y + MASCOT_STYLE.h + px(4);
 
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(40),
+      ...NAME_STYLE,
       y: nameY,
-      w: W - px(80),
-      h: px(32),
       text: training.name,
-      text_size: px(FONT.MEDIUM),
-      color: COLORS.WHITE,
-      align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
     });
 
     // ── Type badge ──────────────────────────────────────────────────────────
-    var badgeW = px(110);
-    var badgeH = px(24);
-    var badgeX = (W - badgeW) / 2;
+    var badgeX = (DEVICE_WIDTH - BADGE_STYLE.w) / 2;
     var badgeY = nameY + px(34);
 
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
-      x: badgeX,
-      y: badgeY,
-      w: badgeW,
-      h: badgeH,
-      radius: px(12),
+      x: badgeX, y: badgeY,
+      w: BADGE_STYLE.w, h: BADGE_STYLE.h,
+      radius: BADGE_STYLE.radius,
       color: typeInfo.color,
     });
 
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: badgeX,
-      y: badgeY,
-      w: badgeW,
-      h: badgeH,
+      x: badgeX, y: badgeY,
+      w: BADGE_STYLE.w, h: BADGE_STYLE.h,
       text: typeInfo.label,
-      text_size: px(FONT.TINY),
-      color: COLORS.WHITE,
+      text_size: BADGE_STYLE.text_size,
+      color: BADGE_STYLE.textColor,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
     });
 
     // ── Details card ────────────────────────────────────────────────────────
-    var cardW = px(340);
-    var cardX = (W - cardW) / 2;
-    var cardY = badgeY + badgeH + px(10);
-    var cardPadV = px(10);
-    var rowH = px(24);
-    var rowGap = px(4);
+    var cardW = CARD_STYLE.w;
+    var cardX = (DEVICE_WIDTH - cardW) / 2;
+    var cardY = badgeY + BADGE_STYLE.h + px(10);
+
+    var rowH = ROW_DIMS.h;
+    var rowGap = ROW_DIMS.gap;
 
     var rowCount = 0;
     if (training.durationMinutes) rowCount++;
     if (training.distanceMeters) rowCount++;
     if (training.paceGoalSecPerKm && training.paceGoalSecPerKm > 0) rowCount++;
 
-    var cardH = cardPadV * 2 + rowCount * rowH + (rowCount > 1 ? (rowCount - 1) * rowGap : 0);
+    var cardH = ROW_DIMS.padV * 2 + rowCount * rowH + (rowCount > 1 ? (rowCount - 1) * rowGap : 0);
     if (cardH < px(44)) cardH = px(44);
 
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
-      x: cardX,
-      y: cardY,
-      w: cardW,
-      h: cardH,
-      radius: px(14),
-      color: COLORS.BG_CARD,
+      x: cardX, y: cardY,
+      w: cardW, h: cardH,
+      radius: CARD_STYLE.radius,
+      color: CARD_STYLE.color,
     });
 
     // Colored left accent bar
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
-      x: cardX + px(8),
-      y: cardY + px(8),
-      w: px(3),
+      x: cardX + CARD_ACCENT.offsetX,
+      y: cardY + CARD_ACCENT.offsetY,
+      w: CARD_ACCENT.w,
       h: cardH - px(16),
-      radius: px(2),
+      radius: CARD_ACCENT.radius,
       color: typeInfo.color,
     });
 
-    var rowY = cardY + cardPadV;
-    var labelX = cardX + px(22);
-    var innerW = cardW - px(22) - px(12);
+    var rowY = cardY + ROW_DIMS.padV;
+    var labelX = cardX + ROW_DIMS.labelX;
+    var innerW = cardW - ROW_DIMS.labelX - px(12);
 
     if (training.durationMinutes) {
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: labelX,
-        y: rowY,
-        w: px(100),
-        h: rowH,
+        x: labelX, y: rowY, w: px(100), h: rowH,
         text: "Duracion",
-        text_size: px(FONT.TINY),
-        color: COLORS.TEXT_SECONDARY,
-        align_h: hmUI.align.LEFT,
-        align_v: hmUI.align.CENTER_V,
+        ...ROW_LABEL_STYLE,
       });
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: labelX,
-        y: rowY,
-        w: innerW,
-        h: rowH,
+        x: labelX, y: rowY, w: innerW, h: rowH,
         text: String(training.durationMinutes) + " min",
-        text_size: px(FONT.SMALL),
-        color: COLORS.WHITE,
-        align_h: hmUI.align.RIGHT,
-        align_v: hmUI.align.CENTER_V,
+        ...ROW_VALUE_STYLE,
       });
       rowY += rowH + rowGap;
     }
 
     if (training.distanceMeters) {
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: labelX,
-        y: rowY,
-        w: px(100),
-        h: rowH,
+        x: labelX, y: rowY, w: px(100), h: rowH,
         text: "Distancia",
-        text_size: px(FONT.TINY),
-        color: COLORS.TEXT_SECONDARY,
-        align_h: hmUI.align.LEFT,
-        align_v: hmUI.align.CENTER_V,
+        ...ROW_LABEL_STYLE,
       });
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: labelX,
-        y: rowY,
-        w: innerW,
-        h: rowH,
+        x: labelX, y: rowY, w: innerW, h: rowH,
         text: (training.distanceMeters / 1000).toFixed(1) + " km",
-        text_size: px(FONT.SMALL),
-        color: COLORS.WHITE,
-        align_h: hmUI.align.RIGHT,
-        align_v: hmUI.align.CENTER_V,
+        ...ROW_VALUE_STYLE,
       });
       rowY += rowH + rowGap;
     }
 
     if (training.paceGoalSecPerKm && training.paceGoalSecPerKm > 0) {
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: labelX,
-        y: rowY,
-        w: px(120),
-        h: rowH,
-        text: getSpeedGoalLabel(),
-        text_size: px(FONT.TINY),
-        color: COLORS.TEXT_SECONDARY,
-        align_h: hmUI.align.LEFT,
-        align_v: hmUI.align.CENTER_V,
+        x: labelX, y: rowY, w: px(120), h: rowH,
+        text: formatSpeedLabel(true),
+        ...ROW_LABEL_STYLE,
       });
       hmUI.createWidget(hmUI.widget.TEXT, {
-        x: labelX,
-        y: rowY,
-        w: innerW,
-        h: rowH,
+        x: labelX, y: rowY, w: innerW, h: rowH,
         text: formatSpeed(training.paceGoalSecPerKm),
-        text_size: px(FONT.SMALL),
-        color: COLORS.WHITE,
-        align_h: hmUI.align.RIGHT,
-        align_v: hmUI.align.CENTER_V,
+        ...ROW_VALUE_STYLE,
       });
     }
 
@@ -309,39 +212,29 @@ Page({
     var statusY = cardY + cardH + px(6);
 
     hmUI.createWidget(hmUI.widget.TEXT, {
-      x: px(0),
-      y: statusY,
-      w: W,
-      h: px(22),
+      x: px(0), y: statusY,
+      w: DEVICE_WIDTH,
+      ...STATUS_STYLE,
       text: "Preparado!",
-      text_size: px(FONT.TINY),
-      color: COLORS.READY_GREEN,
-      align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
     });
 
     // ── COMENZAR button ─────────────────────────────────────────────────────
     // Place dynamically after content, capped at safe zone for round display
-    var btnW = px(300);
-    var btnH = px(64);
-    var btnX = (W - btnW) / 2;
+    var btnW = BUTTON_START_STYLE.w;
+    var btnH = BUTTON_START_STYLE.h;
+    var btnX = (DEVICE_WIDTH - btnW) / 2;
     var desiredBtnY = statusY + px(28);
     var maxBtnY = px(345);
     var btnY = desiredBtnY < maxBtnY ? desiredBtnY : maxBtnY;
 
     pageState.startBtnWidget = hmUI.createWidget(hmUI.widget.BUTTON, {
-      x: btnX,
-      y: btnY,
-      w: btnW,
-      h: btnH,
+      x: btnX, y: btnY, w: btnW, h: btnH,
       text: "COMENZAR",
-      text_size: px(FONT.MEDIUM),
-      radius: px(32),
-      normal_color: COLORS.PRIMARY,
-      press_color: COLORS.PRIMARY_DARK,
-      click_func: function () {
-        startTraining(training);
-      },
+      text_size: BUTTON_START_STYLE.text_size,
+      radius: BUTTON_START_STYLE.radius,
+      normal_color: BUTTON_START_STYLE.normal_color,
+      press_color: BUTTON_START_STYLE.press_color,
+      click_func: function () { startTraining(training) },
     });
 
     // GPS status indicator (created last for highest z-order)
